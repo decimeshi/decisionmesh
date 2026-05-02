@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Silent auth callback</title>
+  <!--
+    public/auth/silent-callback.html
+    ─────────────────────────────────
+    This page handles the hidden iframe redirect that oidc-client-ts
+    uses for signinSilent(). It must:
+
+      1. Be served at the exact URL set in VITE_ZITADEL_SILENT_REDIRECT_URI
+         (default: http://localhost:3000/auth/silent-callback)
+
+      2. Be registered in Zitadel Console:
+         Your Application → Redirect URIs → add the silent URI
+
+      3. Call signinSilentCallback() — which posts a message to the
+         parent frame with the new token so oidc-client-ts can pick it up.
+
+    This page is intentionally minimal. It has no navigation, no React,
+    and no app bundle — it loads only oidc-client-ts from the same bundle
+    entry point as your app does when you import from 'oidc-client-ts'.
+
+    If you are using Vite with React, the easiest approach is to add
+    this file to your public/ directory and reference the oidc-client-ts
+    UMD build directly so no bundler is needed here.
+  -->
+</head>
+<body>
+<script>
+  // Use the UMD build of oidc-client-ts that is already bundled into your app.
+  // Because this page runs inside a hidden iframe with its own origin context,
+  // it cannot import from your Vite bundle directly.
+  //
+  // Option A (recommended for Vite): copy oidc-client-ts's UMD file into
+  //   public/oidc-client.umd.js during your build and load it here.
+  //   Run once: cp node_modules/oidc-client-ts/dist/browser/oidc-client-ts.umd.cjs public/oidc-client.umd.js
+  //
+  // Option B (CDN): load from a CDN that matches your installed version.
+  //   Replace <VERSION> with the version in your package.json.
+  //
+  // This file uses Option A — switch to Option B if you prefer not to copy.
+
+  (async () => {
+    try {
+      // Dynamic import — works if your bundler exposes oidc-client-ts
+      // at this path, or if you copied the UMD file as described above.
+      const src = document.createElement('script');
+      src.src = '/oidc-client.umd.js';
+      src.onload = () => {
+        // oidc-client-ts UMD exposes itself as window.oidc
+        if (window.oidc && window.oidc.UserManager) {
+          new window.oidc.UserManager({}).signinSilentCallback()
+            .catch(err => console.error('[silent-callback] signinSilentCallback error:', err));
+        } else {
+          console.error('[silent-callback] oidc UserManager not found on window.oidc');
+        }
+      };
+      src.onerror = () => {
+        // Fallback: try the ESM build via dynamic import
+        import('/src/auth/zitadel.js')
+          .then(m => {
+            // If the app bundle loaded, use the UserManager from oidc-client-ts
+            import('oidc-client-ts').then(({ UserManager }) => {
+              new UserManager({}).signinSilentCallback()
+                .catch(err => console.error('[silent-callback] fallback error:', err));
+            });
+          })
+          .catch(() => {
+            console.error('[silent-callback] Could not load oidc-client-ts. ' +
+              'Copy node_modules/oidc-client-ts/dist/browser/oidc-client-ts.umd.cjs ' +
+              'to public/oidc-client.umd.js');
+          });
+      };
+      document.head.appendChild(src);
+    } catch (err) {
+      console.error('[silent-callback] Unexpected error:', err);
+    }
+  })();
+</script>
+</body>
+</html>

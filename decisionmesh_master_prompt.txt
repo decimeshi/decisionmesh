@@ -1,0 +1,172 @@
+
+You are building a production-grade system called "DecisionMesh".
+
+Goal:
+Create a globally distributed AI Decision Control Plane that dynamically routes, evaluates, optimizes, learns, and monetizes AI decisions across multiple vendors.
+
+================ CORE CAPABILITIES =================
+
+1. Multi-tenant SaaS platform
+- Each tenant has isolated data, policies, analytics
+- Tenant-based routing and billing
+
+2. Intent-driven decision engine
+- Input: intent, policy, tenant
+- Output: best vendor + execution result + score
+
+3. Multi-vendor AI routing
+- Support pluggable vendors (OpenAI, Claude, future vendors)
+- Use plugin registry pattern
+- Each vendor has:
+  - cost
+n  - latency
+  - accuracy
+  - execute() method
+
+4. Policy-based scoring system
+- Policies: balanced, low_cost, high_accuracy
+- Weighted scoring:
+  score = (accuracy * w1) + ((1-cost)*w2) + ((1-latency)*w3)
+
+5. A/B testing mode
+- Random vendor selection for experimentation
+- Compare performance over time
+
+6. SLA enforcement
+- Check latency threshold
+- Mark slaMet in response
+
+7. Outcome-based learning engine
+- Track success/failure
+- Adjust weights dynamically based on:
+  - success rate
+  - avg score
+
+8. Auto policy engine
+- Automatically switch policies based on:
+  - ROI
+  - success rate
+  - performance
+
+9. Analytics system
+- Total decisions
+- Average score
+- Success rate
+- Vendor usage
+
+10. ROI engine
+- Calculate:
+  - total cost
+  - baseline cost
+  - savings
+  - ROI %
+
+11. Decision persistence
+- Store every decision in Postgres (reactive)
+- Fields:
+  tenant, intent, policy, vendor, score, response, success, timestamp
+
+12. Usage metering
+- Track per-request cost
+- Store in UsageEntity
+
+13. Billing system
+- Aggregate tenant usage
+- Calculate total cost
+- Apply revenue split (20% platform, 80% vendor)
+
+14. Payments integration
+- Stripe (global)
+- Razorpay (India)
+
+15. Marketplace system
+- Vendors are plugins
+- Policies are templates
+- Enable/disable vendors per tenant
+
+16. Event-driven architecture
+- Publish decision events to Kafka
+- Topic: decision-events
+
+17. Real-time streaming
+- Use Kafka (SmallRye Reactive Messaging)
+
+18. Decision graph
+- Build graph from historical decisions
+- Nodes = decisions/vendors
+- Edges = sequence
+
+19. Enterprise dashboard (React)
+- KPI cards (decisions, score, success rate)
+- Charts (trend, leaderboard)
+- Graph visualization (React Flow)
+
+20. Multi-region deployment
+- Regions: us-east-1, eu-west-1, ap-south-1
+- Geo routing + tenant stickiness
+
+21. SDK support
+- Java SDK (HTTP client)
+- Python SDK (requests)
+
+================ ARCHITECTURE =================
+
+Frontend:
+- React (Vite)
+- Tailwind UI
+- Recharts (analytics)
+- React Flow (graph)
+
+Backend:
+- Quarkus (Reactive)
+- Hibernate Reactive + Postgres
+- SmallRye Mutiny (Uni)
+- OIDC (Zitadel)
+
+Streaming:
+- Kafka (SmallRye Reactive Messaging)
+
+Payments:
+- Stripe + Razorpay
+
+================ DATA FLOW =================
+
+1. User selects tenant + intent + policy
+2. Request hits /decision/evaluate
+3. Auto policy may override policy
+4. Vendors evaluated (or A/B selected)
+5. SLA checked
+6. Vendor executed
+7. Result persisted
+8. Usage recorded
+9. Event published to Kafka
+10. Response returned
+11. Analytics + ROI updated
+12. Learning engine updates weights
+
+================ OUTPUT FORMAT =================
+
+Response should include:
+- vendor name
+- score
+- output
+- slaMet
+- policy
+- tenant
+- timestamp
+
+================ GOAL =================
+
+Build a system that:
+- Learns from outcomes
+- Optimizes cost + quality + performance
+- Supports plug-and-play vendors
+- Scales globally
+- Generates revenue via usage + marketplace
+
+================ FINAL DEFINITION =================
+
+DecisionMesh =
+"A globally distributed, self-learning AI decision control plane with marketplace, streaming, analytics, and monetization capabilities"
+
+*

@@ -1,0 +1,129 @@
+# =============================================================================
+# docker-compose.staging.yml
+# DecisionMesh — Staging (same Hetzner CX32, separate containers)
+#
+# Shares ollama with production (same model, separate network bridge).
+# Staging OpenBao uses dev mode (simpler, no unseal ceremony).
+# Uses separate DB and Redis from production.
+# Accessible at: https://staging.yourdomain.com
+# =============================================================================
+
+name: decisionmesh-staging
+
+services:
+
+  api-staging:
+    image: ${API_IMAGE:-ghcr.io/decisionmesh/api:latest}
+    container_name: dm-api-staging
+    restart: unless-stopped
+    environment:
+      QUARKUS_PROFILE: staging
+      QUARKUS_HTTP_PORT: 8081
+
+      QUARKUS_DATASOURCE_REACTIVE_URL: vertx-reactive:postgresql://postgres-staging:5432/${STAGING_DB_NAME:-decisionmesh_staging}
+      QUARKUS_DATASOURCE_USERNAME: ${STAGING_DB_USER:-dm_staging}
+      QUARKUS_DATASOURCE_PASSWORD: ${STAGING_DB_PASSWORD}
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres-staging:5432/${STAGING_DB_NAME:-decisionmesh_staging}
+
+      QUARKUS_OIDC_AUTH_SERVER_URL: ${ZITADEL_AUTHORITY:-https://decisionmesh-1pgrry.eu1.zitadel.cloud}
+      QUARKUS_OIDC_CLIENT_ID: ${ZITADEL_CLIENT_ID:-368134611768783581}
+
+      QUARKUS_VAULT_URL: http://openbao-staging:8200
+      QUARKUS_VAULT_AUTHENTICATION_CLIENT_TOKEN: ${STAGING_BAO_TOKEN:-staging-dev-token}
+
+      QUARKUS_REDIS_HOSTS: redis://:${STAGING_REDIS_PASSWORD}@redis-staging:6379
+
+      EMBEDDING_URL: http://dm-ollama:11434
+      EMBEDDING_MODEL: nomic-embed-text
+
+      QUARKUS_HTTP_CORS_ORIGINS: https://staging.${DOMAIN:-yourdomain.com}
+
+      ZITADEL_URL: https://decisionmesh-1pgrry.eu1.zitadel.cloud
+      ZITADEL_SERVICE_ACCOUNT_TOKEN: ${ZITADEL_SERVICE_TOKEN}
+      ZITADEL_ORGANIZATION_ID: ${ZITADEL_ORG_ID:-368134337511633629}
+      ZITADEL_PROJECT_ID: ${ZITADEL_PROJECT_ID:-368134576352038839}
+
+    depends_on:
+      postgres-staging:
+        condition: service_healthy
+      redis-staging:
+        condition: service_healthy
+      openbao-staging:
+        condition: service_healthy
+    networks:
+      - staging
+      - ollama-shared
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/q/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  postgres-staging:
+    image: pgvector/pgvector:pg16
+    container_name: dm-postgres-staging
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${STAGING_DB_NAME:-decisionmesh_staging}
+      POSTGRES_USER: ${STAGING_DB_USER:-dm_staging}
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    networks:
+      - staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${STAGING_DB_USER:-dm_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-staging:
+    image: redis:7.2-alpine
+    container_name: dm-redis-staging
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${STAGING_REDIS_PASSWORD}
+      --maxmemory 64mb
+      --maxmemory-policy allkeys-lru
+      --loglevel warning
+    networks:
+      - staging
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${STAGING_REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Staging OpenBao uses dev mode — no unseal needed, simpler for testing
+  openbao-staging:
+    image: openbao/openbao:latest
+    container_name: dm-openbao-staging
+    restart: unless-stopped
+    command: server -dev
+    cap_add:
+      - IPC_LOCK
+    environment:
+      BAO_DEV_ROOT_TOKEN_ID: ${STAGING_BAO_TOKEN:-staging-dev-token}
+      BAO_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      BAO_LOG_LEVEL: warn
+    networks:
+      - staging
+    healthcheck:
+      test: ["CMD-SHELL", "bao status -address=http://127.0.0.1:8200 2>/dev/null; exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  staging:
+    driver: bridge
+    internal: true
+  # Connects to prod's backend network so staging api can reach dm-ollama
+  ollama-shared:
+    external: true
+    name: decisionmesh-prod_backend
+
+volumes:
+  postgres_staging_data:

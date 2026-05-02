@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+
+@layer base {
+  :root {
+    --brand-primary: #2563eb;
+    --brand-light:   #eff6ff;
+    --brand-dark:    #1d4ed8;
+    --brand-text:    #1e40af;
+  }
+}
+
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  /* Base font size increased from browser default 16px to 17px.
+     All rem-based Tailwind sizes scale up proportionally:
+       text-xs  → 13.6px  (was 12px)
+       text-sm  → 15.3px  (was 14px)
+       text-base→ 17px    (was 16px)
+       text-lg  → 20.4px  (was 18px)          */
+  html {
+    font-size: 17px;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body { @apply bg-slate-50 text-slate-900; margin: 0; }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full; }
+}

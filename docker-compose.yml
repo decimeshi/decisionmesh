@@ -1,0 +1,277 @@
+name: decisionmesh-local
+
+services:
+
+  # ------ PostgreSQL ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  # application.properties:
+  #   quarkus.datasource.db-kind=postgresql  (localhost:5432)
+  #   DB: decisionmesh / user: decisionmesh / pw: decisionmesh
+  postgres:
+    image: postgres:16-alpine
+    container_name: decisionmesh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: decisionmesh
+      POSTGRES_USER: decisionmesh
+      POSTGRES_PASSWORD: decisionmesh
+    ports:
+      - "5432:5432"
+    volumes:
+      - D:/docker-data/postgres:/var/lib/postgresql/data
+    networks:
+      - decisionmesh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U decisionmesh -d decisionmesh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------ Redis ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  # application.properties:
+  #   quarkus.redis.hosts=redis://localhost:6379  (no password in dev)
+  #
+  # Used by 10 classes - ALL on the hot intent execution path:
+  #   RedisLockManager        SET NX PX - distributed intent locks
+  #   RedisRateLimiter        INCR+EXPIRE - per-tenant rate limiting
+  #   RedisIdempotencyService SETNX - duplicate intent prevention
+  #   RedisPlanRepository     GET/SET - intent plan storage
+  #   RedisLearningEngine     GET/SET - EMA adapter performance profiles
+  #   RedisTelemetrySink      RPUSH - telemetry event buffer
+  #   RedisExecutionRepository GET/SET - execution cache
+  #   CachedIntentRepository  GET/SET - intent hot cache
+  #   RedisAdapterLearning    GET/SET - adapter learning data
+  #   RedisRateLimiter(sec)   INCR - API rate limiting
+  redis:
+    image: redis:7.2-alpine
+    container_name: decisionmesh-redis
+    restart: unless-stopped
+    command: redis-server --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - D:/docker-data/redis:/data
+    networks:
+      - decisionmesh
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ------ OpenBao ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  # application.properties:
+  #   quarkus.vault.url=http://localhost:8200
+  #   quarkus.vault.authentication.client-token=dev-root-token
+  #   quarkus.vault.kv-secret-engine-version=2
+  #
+  # VaultConfigSource reads these paths at Quarkus startup:
+  #   secret/decisionmesh/db        DB credentials
+  #   secret/decisionmesh/llm       Anthropic / OpenAI API keys
+  #   secret/decisionmesh/stripe    Stripe secret + webhook keys
+  #   secret/decisionmesh/razorpay  Razorpay key-id + secret
+  #   secret/decisionmesh/auth      Zitadel service account token
+  #   secret/decisionmesh/email     SMTP credentials
+  #
+  # UI: http://localhost:8200  token: dev-root-token
+  #
+  # After first start run:
+  #   docker compose exec openbao sh /scripts/init-secrets.sh
+  openbao:
+    image: openbao/openbao:latest
+    container_name: decisionmesh-openbao
+    restart: unless-stopped
+    command: server -dev
+    environment:
+      BAO_DEV_ROOT_TOKEN_ID: dev-root-token
+      BAO_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      BAO_LOG_LEVEL: info
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./infra/openbao/init-secrets.sh:/scripts/init-secrets.sh:ro
+    networks:
+      - decisionmesh
+    healthcheck:
+      test: ["CMD", "bao", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+
+  # ------ Ollama - local embedding server ------------------------------------
+  # Used by DriftEvaluatorService: POST http://localhost:11434/api/embeddings
+  # application.properties:
+  #   embedding.url=http://localhost:11434
+  #   embedding.model=nomic-embed-text
+  #
+  # CPU-only - no GPU needed. ~45ms per embed on a laptop.
+  # Model (nomic-embed-text, 274MB) pulled once by ollama-init,
+  # cached in ollama_data volume - survives container restarts.
+  #
+  # API:  http://localhost:11434
+  # Test: curl http://localhost:11434/api/embeddings -d '{"model":"nomic-embed-text","prompt":"hello"}'
+  ollama:
+    image: ollama/ollama:latest
+    container_name: decisionmesh-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - D:/docker-data/ollama:/root/.ollama
+    networks:
+      - decisionmesh
+    healthcheck:
+      # ollama CLI is available in the image; curl is NOT
+      # start_period is generous for Windows Docker Desktop startup overhead
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Pulls nomic-embed-text on first start then exits.
+  # ollama pull is a no-op if model is already in the volume.
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: decisionmesh-ollama-init
+    restart: "no"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: >
+      sh -c "
+        echo '[ollama-init] Waiting for ollama...';
+        sleep 10;
+        ollama pull nomic-embed-text;
+        echo '[ollama-init] nomic-embed-text ready.';
+      "
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - decisionmesh
+
+
+  # ------ Kafka (KRaft mode — no Zookeeper) ----------------------------------
+  # KRaft = Kafka Raft — self-managed metadata, no Zookeeper dependency.
+  # Single-broker dev setup. Topics auto-created on first publish.
+  #
+  # Quarkus config (add to application.properties):
+  #   mp.messaging.connector.smallrye-kafka.bootstrap.servers=localhost:9092
+  #   mp.messaging.outgoing.intent-events.connector=smallrye-kafka
+  #   mp.messaging.outgoing.intent-events.topic=intent-events
+  #   mp.messaging.outgoing.execution-events.connector=smallrye-kafka
+  #   mp.messaging.outgoing.execution-events.topic=execution-events
+  #   mp.messaging.outgoing.governance-events.connector=smallrye-kafka
+  #   mp.messaging.outgoing.governance-events.topic=governance-events
+  #
+  # Kafka UI: http://localhost:8090
+  # Bootstrap: localhost:9092
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: decisionmesh-kafka
+    restart: unless-stopped
+    environment:
+      # KRaft — no Zookeeper
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Topic defaults
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      # Performance tuning for dev
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "9092:9092"
+    volumes:
+      - D:/docker-data/kafka:/var/lib/kafka/data
+    networks:
+      - decisionmesh
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ------ Kafka UI ---------------------------------------------------------------
+  # Browse topics, messages, consumer groups.
+  # UI: http://localhost:8090
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: decisionmesh-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: decisionmesh-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - decisionmesh
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # ------ Prometheus ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  # Scrapes Quarkus metrics at http://host.docker.internal:8080/q/metrics
+  # UI: http://localhost:9090
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: decisionmesh-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - D:/docker-data/prometheus:/prometheus
+    networks:
+      - decisionmesh
+
+  # ------ Grafana ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  # Dashboards for Redis, Quarkus JVM, intent pipeline metrics.
+  # UI: http://localhost:3001  admin / admin
+  # Add Prometheus datasource: http://prometheus:9090
+  grafana:
+    image: grafana/grafana:latest
+    container_name: decisionmesh-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - D:/docker-data/grafana:/var/lib/grafana
+    networks:
+      - decisionmesh
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  openbao_data:
+  ollama_data:
+  kafka_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  decisionmesh:
+    driver: bridge

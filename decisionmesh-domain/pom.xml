@@ -1,0 +1,72 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.decisionmesh</groupId>
+        <artifactId>decisionmesh</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>decisionmesh-domain</artifactId>
+    <packaging>jar</packaging>
+    <!--
+            ARCHITECTURE RULE: This module must stay framework-free.
+            It is the pure domain model — aggregates, value objects,
+            domain events, and domain services only.
+
+            ✗ No quarkus-hibernate-orm-panache     (ORM belongs in persistence)
+            ✗ No quarkus-redis-client              (infra belongs in persistence)
+            ✗ No jakarta.persistence-api           (entity annotations in persistence)
+            ✗ No vertx-core                        (infrastructure concern)
+            ✓ CDI API (provided)                   (lifecycle annotations only)
+            ✓ Jackson (for DomainEvent.toJson())   (pure serialisation utility)
+            ✓ Mutiny API (provided)                (return types on domain ports)
+         -->
+    <dependencies>
+
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- JavaTimeModule — Instant, LocalDate etc. in toJson()/fromJson() -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>mutiny</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>7.7.0</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+    <build>
+        <plugins>
+            <!--  Jandex — CDI bean discovery when consumed by Quarkus modules  -->
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

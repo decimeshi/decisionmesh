@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#111827"/>
+  
+  <!-- Diamond outline -->
+  <polygon points="32,10 50,32 32,54 14,32" fill="none" stroke="#38bdf8" stroke-width="2"/>
+  
+  <!-- Grid lines -->
+  <line x1="14" y1="32" x2="50" y2="32" stroke="#38bdf8" stroke-width="1.2" opacity="0.4"/>
+  <line x1="32" y1="10" x2="32" y2="54" stroke="#38bdf8" stroke-width="1.2" opacity="0.4"/>
+  
+  <!-- Inner mesh nodes -->
+  <circle cx="32" cy="21" r="3" fill="#38bdf8"/>
+  <circle cx="32" cy="32" r="4.5" fill="#38bdf8"/>
+  <circle cx="32" cy="43" r="3" fill="#38bdf8"/>
+  <circle cx="23" cy="32" r="2.5" fill="#38bdf8" opacity="0.6"/>
+  <circle cx="41" cy="32" r="2.5" fill="#38bdf8" opacity="0.6"/>
+  
+  <!-- Corner accent nodes -->
+  <circle cx="32" cy="10" r="2.5" fill="#7dd3fc"/>
+  <circle cx="50" cy="32" r="2.5" fill="#7dd3fc"/>
+  <circle cx="32" cy="54" r="2.5" fill="#7dd3fc"/>
+  <circle cx="14" cy="32" r="2.5" fill="#7dd3fc"/>
+</svg>

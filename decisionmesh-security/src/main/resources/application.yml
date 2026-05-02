@@ -1,0 +1,14 @@
+quarkus:
+        oidc:
+        auth-server-url: http://localhost:8080/realms/decisionmesh
+        client-id: decisionmesh-api
+        credentials:
+        secret: ${KEYCLOAK_CLIENT_SECRET}
+        application-type: service
+
+        http:
+        auth:
+        permission:
+        intents:
+        paths: /v1/intents
+        policy: authenticated

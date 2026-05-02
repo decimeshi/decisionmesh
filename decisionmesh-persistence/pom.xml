@@ -1,0 +1,115 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.decisionmesh</groupId>
+        <artifactId>decisionmesh</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>decisionmesh-persistence</artifactId>
+    <packaging>jar</packaging>
+    <!--
+            Infrastructure persistence layer.
+
+            ORM strategy:
+            ✓ quarkus-hibernate-reactive-panache  → Mutiny.Session / ReactivePanache
+            ✓ quarkus-reactive-pg-client          → non-blocking PostgreSQL I/O driver
+            ✓ quarkus-redis-client                → Redis for hot-path caching / locks
+            ✓ quarkus-flyway + quarkus-jdbc-postgresql → schema migrations only
+                                                         (Flyway is JDBC-only internally;
+                                                          it needs a separate JDBC datasource
+                                                          alongside the reactive one)
+
+            Removed:
+            ✗ decisionmesh-contracts  (phantom — was merged into decisionmesh-security)
+            ✗ quarkus-hibernate-orm   (incompatible with hibernate-reactive in same app)
+            ✗ micrometer-core pinned  (BOM manages it via quarkus-micrometer)
+
+            Repository pattern:
+              All repos implement ReactivePanacheRepositoryBase<E, UUID>
+              and return Uni<T> / Multi<T> exclusively.
+              Use Panache.withTransaction() for writes,
+              Panache.withSession() for reads.
+         -->
+    <dependencies>
+        <!--  ── Internal ───────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>com.decisionmesh</groupId>
+            <artifactId>decisionmesh-domain</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.decisionmesh</groupId>
+            <artifactId>decisionmesh-application</artifactId>
+        </dependency>
+        <!--   Security provides TenantEntity, ApiKeyEntity, UserEntity etc.
+                      persistence repos reference these entities directly.  -->
+        <dependency>
+            <groupId>com.decisionmesh</groupId>
+            <artifactId>decisionmesh-security</artifactId>
+        </dependency>
+        <!--  ── Quarkus Reactive ORM ────────────────────────────────────────  -->
+        <!--  Hibernate Reactive + ReactivePanache — pulls in hibernate-reactive
+                     automatically. Do NOT also declare quarkus-hibernate-orm here;
+                     the two extensions are mutually exclusive.  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-reactive-panache</artifactId>
+        </dependency>
+        <!--  Reactive PostgreSQL driver — replaces quarkus-jdbc-postgresql
+                     for actual application queries  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-pg-client</artifactId>
+        </dependency>
+        <!--  ── Flyway (schema migrations — JDBC path, separate datasource) ──  -->
+        <!--  Flyway itself uses JDBC internally even in a reactive app.
+                     Configure a dedicated jdbc datasource named "flyway" in
+                     application.properties; keep reactive datasource for app queries.
+                     See decisionmesh-bootstrap/src/main/resources/application.properties  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+        </dependency>
+        <!--  ── Redis — hot-path caching, distributed locks, rate limiting ──  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-redis-client</artifactId>
+        </dependency>
+        <!--  ── Observability ───────────────────────────────────────────────  -->
+        <!--  Micrometer — BOM manages version; do NOT pin manually  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer</artifactId>
+        </dependency>
+        <!--  ── CDI + Context ───────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <!--  Context propagation — carries Vert.x / MDC context across
+                     Mutiny pipeline hops in repository methods  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-context-propagation</artifactId>
+        </dependency>
+        <!--  ── Lombok ──────────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

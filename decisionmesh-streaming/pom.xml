@@ -1,0 +1,79 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <!--
+            FIXED: Parent was missing — this module was floating outside the BOM.
+            Mutiny 3.1.0 was being resolved independently of the Quarkus BOM,
+            causing potential version skew with every other module.
+            Restoring the parent gives BOM-managed versions for Mutiny,
+            Kafka, and all Quarkus extensions declared here.
+         -->
+    <parent>
+        <groupId>com.decisionmesh</groupId>
+        <artifactId>decisionmesh</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>decisionmesh-streaming</artifactId>
+    <packaging>jar</packaging>
+    <!--
+            Event streaming backbone.
+            Handles: Kafka outbox publishing, projection workers,
+                     idempotent consumer guard, domain event publishing.
+
+            Mutiny version is now BOM-managed — do NOT pin it directly.
+            Kafka version is BOM-managed via quarkus-messaging-kafka.
+         -->
+    <dependencies>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-pg-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-scheduler</artifactId>
+        </dependency>
+        <!--  ── Internal ───────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>com.decisionmesh</groupId>
+            <artifactId>decisionmesh-domain</artifactId>
+        </dependency>
+        <!--  ── CDI ─────────────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>jakarta.enterprise</groupId>
+            <artifactId>jakarta.enterprise.cdi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!--  ── Mutiny — BOM-managed, no version pin ────────────────────────  -->
+        <dependency>
+            <groupId>io.smallrye.reactive</groupId>
+            <artifactId>mutiny</artifactId>
+        </dependency>
+        <!--  ── Kafka / Reactive Messaging ──────────────────────────────────  -->
+        <!--  SmallRye Reactive Messaging + Kafka connector.
+                     Replaces raw kafka-clients — BOM manages Kafka client version.  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-messaging-kafka</artifactId>
+        </dependency>
+        <!--  ── Context propagation ─────────────────────────────────────────  -->
+        <!--  Carries MDC / security / Vert.x context across Mutiny hops
+                     and into Kafka consumer callbacks  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-context-propagation</artifactId>
+        </dependency>
+        <!--  ── Logging ─────────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-logging-json</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

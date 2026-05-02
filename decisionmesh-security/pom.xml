@@ -1,0 +1,117 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.decisionmesh</groupId>
+        <artifactId>decisionmesh</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>decisionmesh-security</artifactId>
+    <packaging>jar</packaging>
+    <!--
+            Security, auth, and identity module.
+            Contains: TenantEntity, ApiKeyEntity, UserEntity, OrganizationEntity,
+                      ApiKeyAuthenticationMechanism, RateLimitFilter, OIDC filters,
+                      SignupService, TenantService, ApiKeyService.
+
+            ORM: Hibernate Reactive Panache — entities use ReactivePanacheEntityBase.
+                 All auth lookups return Uni<T> and run on the Vert.x event loop.
+
+            Note: This module owns the JPA entities for the identity domain.
+                  decisionmesh-persistence depends on this module to reference
+                  those entity types in its repositories.
+
+            Removed:
+            ✗ decisionmesh-contracts  (phantom — this module IS the contracts impl)
+            ✗ quarkus-hibernate-orm-panache  (replaced by reactive variant below)
+            ✗ quarkus-jdbc-postgresql        (reactive-pg-client handles app queries;
+                                              JDBC kept only in bootstrap for Flyway)
+         -->
+    <dependencies>
+        <!--  ── Internal ───────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>com.decisionmesh</groupId>
+            <artifactId>decisionmesh-domain</artifactId>
+        </dependency>
+
+        <!--  ── CDI ─────────────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <!--  ── Reactive ORM ────────────────────────────────────────────────  -->
+        <!--  Replaces quarkus-hibernate-orm-panache.
+                     ApiKeyEntity, TenantEntity etc. extend ReactivePanacheEntityBase.
+                     Auth lookups in ApiKeyAuthenticationMechanism return Uni<ApiKeyEntity>.  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-reactive-panache</artifactId>
+        </dependency>
+        <!--  Reactive PostgreSQL driver  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-pg-client</artifactId>
+        </dependency>
+        <!--  ── Auth / OIDC ─────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-oidc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.jwt</groupId>
+            <artifactId>microprofile-jwt-auth-api</artifactId>
+        </dependency>
+        <!--  Keycloak admin client — tenant provisioning on signup  -->
+        <!--<dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-admin-client</artifactId>
+        </dependency>-->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-keycloak-admin-rest-client</artifactId>
+        </dependency>
+        <!--  ── REST + Routing ──────────────────────────────────────────────  -->
+        <!--  RESTEasy Reactive — SignupResource, ApiKeyResource  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <!--  Reactive routes — CORS preflight filter, tenant context filter  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-reactive-routes</artifactId>
+        </dependency>
+        <!--  ── Validation ──────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+        <!--  ── OpenAPI ─────────────────────────────────────────────────────  -->
+        <dependency>
+            <groupId>org.eclipse.microprofile.openapi</groupId>
+            <artifactId>microprofile-openapi-api</artifactId>
+        </dependency>
+        <!--  ── Redis — API key cache + rate limiter ────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-redis-client</artifactId>
+        </dependency>
+        <!--  ── Context propagation ─────────────────────────────────────────  -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-context-propagation</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

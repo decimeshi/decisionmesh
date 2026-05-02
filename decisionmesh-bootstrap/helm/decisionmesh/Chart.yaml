@@ -1,0 +1,4 @@
+apiVersion: v2
+name: decisionmesh
+version: 0.1.0
+description: DecisionMesh AI Governance Control Plane

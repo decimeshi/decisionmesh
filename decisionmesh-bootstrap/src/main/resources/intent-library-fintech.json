@@ -1,0 +1,3267 @@
+{
+  "vertical": "FINTECH",
+  "version": "1.0.0",
+  "displayName": "Financial Services",
+  "description": "Payments, lending, fraud detection, compliance, treasury, AP/AR, investments, reconciliation, billing, insurance, reporting and risk management",
+  "regulatoryContext": [
+    "RBI",
+    "SEBI",
+    "IRDAI",
+    "DPDP Act 2023",
+    "FEMA",
+    "IBC",
+    "Prevention of Money Laundering Act"
+  ],
+  "totalIntents": 264,
+  "domains": [
+    {
+      "category": "PAYMENTS",
+      "displayName": "Payments",
+      "description": "Payment processing, authorization, routing, fraud detection and modern payment rails",
+      "defaultSlaMs": 200,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "RBI Payment Aggregator Guidelines 2022",
+      "intents": [
+        {
+          "name": "detect_fraud_transaction",
+          "description": "Evaluates a transaction for fraud indicators using ML models",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "fraud",
+            "realtime",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "approve_payment",
+          "description": "Approves a payment request after validating all rules and limits",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "approval",
+            "payment"
+          ]
+        },
+        {
+          "name": "route_payment",
+          "description": "Selects the optimal payment rail based on amount, currency, and destination",
+          "riskLevel": "LOW",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "routing",
+            "optimization"
+          ]
+        },
+        {
+          "name": "retry_payment",
+          "description": "Retries a failed payment with alternate routing or provider",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "retry",
+            "resilience"
+          ]
+        },
+        {
+          "name": "optimize_payment_rail",
+          "description": "Recommends the best payment rail for cost and speed optimization",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "low_cost",
+          "tags": [
+            "optimization",
+            "routing"
+          ]
+        },
+        {
+          "name": "detect_duplicate_transaction",
+          "description": "Identifies duplicate payment submissions within a time window",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "fraud",
+            "duplicate",
+            "realtime"
+          ]
+        },
+        {
+          "name": "flag_suspicious_transaction",
+          "description": "Flags transactions that match suspicious behavior patterns for review",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "fraud",
+            "aml",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "validate_transaction_limit",
+          "description": "Validates that a transaction amount is within permissible limits for the account",
+          "riskLevel": "MEDIUM",
+          "slaMs": 100,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "validation",
+            "limits"
+          ]
+        },
+        {
+          "name": "authorize_card",
+          "description": "Authorizes a card transaction against issuer rules and available balance",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "card",
+            "authorization",
+            "realtime"
+          ]
+        },
+        {
+          "name": "decline_transaction",
+          "description": "Declines a transaction with a reason code and recommended action",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "decline",
+            "fraud"
+          ]
+        },
+        {
+          "name": "process_refund",
+          "description": "Processes a refund request and initiates reversal to the originating payment method",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "refund",
+            "reversal"
+          ]
+        },
+        {
+          "name": "handle_chargeback",
+          "description": "Manages the chargeback process including evidence collection and dispute filing",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "chargeback",
+            "dispute"
+          ]
+        },
+        {
+          "name": "verify_upi",
+          "description": "Verifies a UPI VPA and validates the beneficiary before payment",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "upi",
+            "verification",
+            "india"
+          ]
+        },
+        {
+          "name": "monitor_realtime_payment",
+          "description": "Monitors real-time payment flows for anomalies and compliance breaches",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "monitoring",
+            "realtime",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "cross_border_check",
+          "description": "Validates cross-border payment compliance including FEMA and purpose code requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fema",
+            "cross-border",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "tokenize_card",
+          "description": "Tokenizes a card for secure storage and future transactions per RBI tokenization norms",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "tokenization",
+            "card",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "validate_card",
+          "description": "Validates card details including BIN, expiry, and CVV",
+          "riskLevel": "MEDIUM",
+          "slaMs": 150,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "card",
+            "validation"
+          ]
+        },
+        {
+          "name": "verify_bank_account",
+          "description": "Verifies a bank account using penny drop or account validation API",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "bank",
+            "verification",
+            "india"
+          ]
+        },
+        {
+          "name": "process_emi",
+          "description": "Converts a transaction into EMI and validates eligibility and repayment schedule",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "emi",
+            "lending",
+            "card"
+          ]
+        },
+        {
+          "name": "split_payment",
+          "description": "Splits a single payment across multiple beneficiaries or accounts",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "split",
+            "disbursement"
+          ]
+        },
+        {
+          "name": "initiate_ach",
+          "description": "Initiates an ACH transfer with validation of routing and account numbers",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "ach",
+            "bank-transfer"
+          ]
+        },
+        {
+          "name": "process_swift",
+          "description": "Processes a SWIFT international wire transfer with compliance validation",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "swift",
+            "international",
+            "fema"
+          ]
+        },
+        {
+          "name": "generate_payment_link",
+          "description": "Generates a secure payment link with amount, expiry, and beneficiary details",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "payment-link",
+            "collection"
+          ]
+        },
+        {
+          "name": "settle_payment",
+          "description": "Settles a payment to the merchant or beneficiary after hold period",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "settlement",
+            "merchant"
+          ]
+        },
+        {
+          "name": "reverse_payment",
+          "description": "Reverses a payment and restores the original balance",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "reversal",
+            "correction"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "LENDING",
+      "displayName": "Lending",
+      "description": "Loan origination, credit assessment, risk scoring and loan lifecycle management",
+      "defaultSlaMs": 500,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "RBI Master Direction on Digital Lending 2022",
+      "intents": [
+        {
+          "name": "approve_loan",
+          "description": "Approves a loan application based on creditworthiness and policy rules",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "approval",
+            "credit",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "reject_loan",
+          "description": "Rejects a loan application with reason codes and adverse action notice",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "rejection",
+            "fair-lending"
+          ]
+        },
+        {
+          "name": "calculate_credit_score",
+          "description": "Calculates a proprietary credit score using bureau data and alternative signals",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "credit-score",
+            "underwriting"
+          ]
+        },
+        {
+          "name": "assess_borrower_risk",
+          "description": "Assesses overall borrower risk including income stability and repayment capacity",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "risk",
+            "underwriting",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "determine_interest_rate",
+          "description": "Determines the applicable interest rate based on risk tier and market benchmarks",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "pricing",
+            "interest-rate"
+          ]
+        },
+        {
+          "name": "predict_default",
+          "description": "Predicts probability of default for an active loan using payment behavior signals",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "default",
+            "early-warning",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "detect_synthetic_identity",
+          "description": "Detects synthetic or stolen identity used in loan applications",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fraud",
+            "identity",
+            "aml"
+          ]
+        },
+        {
+          "name": "verify_income",
+          "description": "Verifies declared income using bank statements, ITR, and payroll data",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "income",
+            "verification",
+            "underwriting"
+          ]
+        },
+        {
+          "name": "evaluate_collateral",
+          "description": "Evaluates collateral value and lien eligibility for secured loans",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "collateral",
+            "secured-lending"
+          ]
+        },
+        {
+          "name": "preapprove_loan",
+          "description": "Pre-approves a borrower for a loan offer based on soft credit pull",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "pre-approval",
+            "marketing"
+          ]
+        },
+        {
+          "name": "recommend_loan",
+          "description": "Recommends the most suitable loan product for a borrower profile",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "recommendation",
+            "product-fit"
+          ]
+        },
+        {
+          "name": "assess_sme_credit",
+          "description": "Assesses creditworthiness of small and medium enterprises using GST and bank data",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "sme",
+            "gst",
+            "india"
+          ]
+        },
+        {
+          "name": "monitor_loan_risk",
+          "description": "Continuously monitors active loan portfolio for emerging risk signals",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "monitoring",
+            "portfolio",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "trigger_loan_review",
+          "description": "Triggers a mandatory loan review based on covenant breach or early warning signals",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "review",
+            "covenant",
+            "npa"
+          ]
+        },
+        {
+          "name": "adjust_credit_limit",
+          "description": "Adjusts revolving credit limit based on utilization behavior and risk score changes",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "credit-limit",
+            "revolving"
+          ]
+        },
+        {
+          "name": "disburse_loan",
+          "description": "Disburses approved loan amount to borrower account after documentation verification",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "disbursement",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "close_loan",
+          "description": "Closes a fully repaid loan and releases any lien or collateral",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "closure",
+            "noc"
+          ]
+        },
+        {
+          "name": "restructure_loan",
+          "description": "Restructures a stressed loan with revised terms per RBI resolution framework",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "restructuring",
+            "npa",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "process_loan_repayment",
+          "description": "Processes a loan repayment and updates principal, interest, and outstanding balance",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "repayment",
+            "amortization"
+          ]
+        },
+        {
+          "name": "onboard_borrower",
+          "description": "Onboards a new borrower with KYC, bank account linkage, and mandate creation",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "onboarding",
+            "kyc",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "verify_employment",
+          "description": "Verifies employment status and income through employer or payslip validation",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "employment",
+            "income",
+            "verification"
+          ]
+        },
+        {
+          "name": "generate_loan_statement",
+          "description": "Generates a loan account statement with repayment history and outstanding details",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "statement",
+            "reporting"
+          ]
+        },
+        {
+          "name": "assess_property",
+          "description": "Assesses property value and legal title for home loan or LAP underwriting",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "property",
+            "lap",
+            "home-loan"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "AP_AR",
+      "displayName": "Accounts Payable / Receivable",
+      "description": "Invoice processing, collections, reconciliation and payment automation",
+      "defaultSlaMs": 400,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "GST Act 2017, TDS Provisions under Income Tax Act",
+      "intents": [
+        {
+          "name": "extract_invoice",
+          "description": "Extracts structured data from invoice documents using OCR and NLP",
+          "riskLevel": "LOW",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "ocr",
+            "extraction",
+            "automation"
+          ]
+        },
+        {
+          "name": "validate_invoice",
+          "description": "Validates invoice fields against PO, contract, and GST compliance rules",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "validation",
+            "gst",
+            "compliance"
+          ]
+        },
+        {
+          "name": "match_invoice_po",
+          "description": "Matches invoice to purchase order using 2-way or 3-way matching logic",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "matching",
+            "po",
+            "3-way"
+          ]
+        },
+        {
+          "name": "detect_duplicate_invoice",
+          "description": "Detects duplicate invoice submissions by vendor to prevent double payment",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "duplicate",
+            "fraud",
+            "ap"
+          ]
+        },
+        {
+          "name": "approve_invoice",
+          "description": "Approves an invoice for payment after successful validation and matching",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "approval",
+            "workflow"
+          ]
+        },
+        {
+          "name": "reject_invoice",
+          "description": "Rejects an invoice with reason codes and notifies the vendor",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "rejection",
+            "vendor"
+          ]
+        },
+        {
+          "name": "flag_invoice_anomaly",
+          "description": "Flags invoices with unusual amounts, vendors, or patterns for review",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "anomaly",
+            "fraud",
+            "audit"
+          ]
+        },
+        {
+          "name": "auto_code_invoice",
+          "description": "Automatically assigns GL codes and cost centers to invoice line items",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "gl-coding",
+            "automation"
+          ]
+        },
+        {
+          "name": "validate_tax_invoice",
+          "description": "Validates GST invoice format, GSTIN, and HSN/SAC codes per GST law",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "gst",
+            "tax",
+            "compliance"
+          ]
+        },
+        {
+          "name": "schedule_payment",
+          "description": "Schedules payment for an approved invoice optimizing for early payment discounts",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "low_cost",
+          "tags": [
+            "scheduling",
+            "cash-management"
+          ]
+        },
+        {
+          "name": "split_invoice",
+          "description": "Splits a single invoice across multiple cost centers or GL accounts",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "split",
+            "allocation"
+          ]
+        },
+        {
+          "name": "process_credit_note",
+          "description": "Processes a vendor credit note and applies it to outstanding invoices",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "credit-note",
+            "adjustment"
+          ]
+        },
+        {
+          "name": "verify_invoice_compliance",
+          "description": "Verifies invoice compliance with vendor contract terms and company policy",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "compliance",
+            "contract"
+          ]
+        },
+        {
+          "name": "audit_invoice",
+          "description": "Performs audit sampling on invoices for compliance and accuracy verification",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "audit",
+            "sampling"
+          ]
+        },
+        {
+          "name": "predict_payment_delay",
+          "description": "Predicts likelihood of customer payment delay using behavioral signals",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "prediction",
+            "collections",
+            "ar"
+          ]
+        },
+        {
+          "name": "generate_invoice",
+          "description": "Generates a GST-compliant invoice with all required fields and tax calculations",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "generation",
+            "gst",
+            "ar"
+          ]
+        },
+        {
+          "name": "send_payment_reminder",
+          "description": "Sends automated payment reminders to customers based on due date proximity",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "reminder",
+            "collections",
+            "ar"
+          ]
+        },
+        {
+          "name": "prioritize_collection",
+          "description": "Prioritizes collection efforts based on customer risk score and invoice age",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "collections",
+            "prioritization",
+            "ar"
+          ]
+        },
+        {
+          "name": "reconcile_receivable",
+          "description": "Reconciles received payments against outstanding invoices",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "reconciliation",
+            "ar"
+          ]
+        },
+        {
+          "name": "apply_payment",
+          "description": "Applies a customer payment to the correct invoice and updates the balance",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "payment-application",
+            "ar"
+          ]
+        },
+        {
+          "name": "offer_discount",
+          "description": "Evaluates and offers early payment discount to accelerate receivables",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "low_cost",
+          "tags": [
+            "discount",
+            "working-capital"
+          ]
+        },
+        {
+          "name": "detect_overdue_risk",
+          "description": "Detects invoices at risk of becoming overdue based on payment behavior patterns",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "overdue",
+            "risk",
+            "ar"
+          ]
+        },
+        {
+          "name": "automate_dunning",
+          "description": "Automates dunning process with escalating reminders and legal notices",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "dunning",
+            "collections"
+          ]
+        },
+        {
+          "name": "resolve_dispute",
+          "description": "Manages invoice dispute resolution workflow between buyer and supplier",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "dispute",
+            "resolution"
+          ]
+        },
+        {
+          "name": "track_receivable_aging",
+          "description": "Tracks receivable aging buckets and generates aging analysis reports",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "aging",
+            "reporting",
+            "ar"
+          ]
+        },
+        {
+          "name": "forecast_receivable",
+          "description": "Forecasts receivable collections for cash flow planning",
+          "riskLevel": "LOW",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "forecast",
+            "cash-flow"
+          ]
+        },
+        {
+          "name": "match_payment",
+          "description": "Matches incoming payments to open invoices using fuzzy matching",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "matching",
+            "payment",
+            "ar"
+          ]
+        },
+        {
+          "name": "identify_bad_debt",
+          "description": "Identifies invoices unlikely to be recovered and recommends write-off",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "bad-debt",
+            "write-off",
+            "ar"
+          ]
+        },
+        {
+          "name": "escalate_collection",
+          "description": "Escalates collection to legal or collection agency based on delinquency threshold",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "escalation",
+            "legal",
+            "collections"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "TREASURY",
+      "displayName": "Treasury",
+      "description": "Cash management, liquidity optimization, FX and capital planning",
+      "defaultSlaMs": 400,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "RBI Foreign Exchange Management Act, Companies Act 2013",
+      "intents": [
+        {
+          "name": "predict_cashflow",
+          "description": "Predicts short and medium-term cash flows using historical patterns and commitments",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "forecast",
+            "cash-flow"
+          ]
+        },
+        {
+          "name": "optimize_liquidity",
+          "description": "Optimizes liquidity position across accounts to minimize idle cash and borrowing cost",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "liquidity",
+            "optimization"
+          ]
+        },
+        {
+          "name": "allocate_funds",
+          "description": "Allocates available funds across business units per policy and priority rules",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "allocation",
+            "funds"
+          ]
+        },
+        {
+          "name": "detect_cash_anomaly",
+          "description": "Detects anomalous cash movements that may indicate fraud or error",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "anomaly",
+            "fraud",
+            "monitoring"
+          ]
+        },
+        {
+          "name": "fx_conversion",
+          "description": "Executes or recommends FX conversion at optimal rate within FEMA guidelines",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "fx",
+            "fema",
+            "cross-border"
+          ]
+        },
+        {
+          "name": "forecast_treasury",
+          "description": "Generates medium-term treasury position forecast for planning",
+          "riskLevel": "MEDIUM",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "forecast",
+            "planning"
+          ]
+        },
+        {
+          "name": "optimize_working_capital",
+          "description": "Identifies working capital optimization opportunities across payables and receivables",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "working-capital",
+            "optimization"
+          ]
+        },
+        {
+          "name": "monitor_bank_balance",
+          "description": "Monitors bank account balances across entities for threshold breaches",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "monitoring",
+            "balance"
+          ]
+        },
+        {
+          "name": "recommend_investment",
+          "description": "Recommends short-term investment of surplus cash in permitted instruments",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "investment",
+            "surplus",
+            "sebi"
+          ]
+        },
+        {
+          "name": "manage_borrowing",
+          "description": "Evaluates and manages short-term borrowing needs and facility utilization",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "borrowing",
+            "facility"
+          ]
+        },
+        {
+          "name": "detect_cash_movement",
+          "description": "Detects large or unusual cash movements across entities in real time",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "monitoring",
+            "aml",
+            "realtime"
+          ]
+        },
+        {
+          "name": "balance_accounts",
+          "description": "Automatically balances cash across notional pooling or zero-balance accounts",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "pooling",
+            "zba"
+          ]
+        },
+        {
+          "name": "optimize_yield",
+          "description": "Optimizes yield on treasury investments within risk and regulatory constraints",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "yield",
+            "investment",
+            "sebi"
+          ]
+        },
+        {
+          "name": "plan_capital",
+          "description": "Plans capital allocation for growth initiatives and regulatory requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "capital",
+            "planning"
+          ]
+        },
+        {
+          "name": "stress_liquidity",
+          "description": "Runs liquidity stress scenarios per RBI guidelines to assess resilience",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "stress-test",
+            "rbi-required",
+            "liquidity"
+          ]
+        },
+        {
+          "name": "manage_hedging",
+          "description": "Evaluates and executes hedging strategies to manage FX and interest rate risk",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "hedging",
+            "fx",
+            "derivatives"
+          ]
+        },
+        {
+          "name": "execute_sweep",
+          "description": "Executes automated cash sweep between accounts at end of day",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "sweep",
+            "automation"
+          ]
+        },
+        {
+          "name": "manage_netting",
+          "description": "Manages intercompany netting to reduce payment volumes and FX exposure",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "netting",
+            "intercompany"
+          ]
+        },
+        {
+          "name": "optimize_debt",
+          "description": "Optimizes debt structure across instruments to minimize cost of capital",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "debt",
+            "optimization"
+          ]
+        },
+        {
+          "name": "monitor_counterparty_risk",
+          "description": "Monitors counterparty credit risk for banks and financial institutions",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "counterparty",
+            "risk",
+            "rbi-required"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "FRAUD",
+      "displayName": "Fraud Detection",
+      "description": "AML, identity fraud, behavioral monitoring and threat detection",
+      "defaultSlaMs": 150,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "Prevention of Money Laundering Act 2002, RBI KYC Master Direction",
+      "intents": [
+        {
+          "name": "detect_aml",
+          "description": "Detects anti-money laundering patterns in transaction flows and customer behavior",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "aml",
+            "pmla",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "flag_high_risk_account",
+          "description": "Flags accounts exhibiting high-risk behaviors for enhanced due diligence",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "edd",
+            "risk",
+            "aml"
+          ]
+        },
+        {
+          "name": "monitor_behavior",
+          "description": "Monitors customer behavior patterns for anomalies indicative of fraud",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "behavioral",
+            "monitoring",
+            "realtime"
+          ]
+        },
+        {
+          "name": "detect_insider_fraud",
+          "description": "Detects insider threat patterns including unauthorized access and data exfiltration",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "insider",
+            "threat"
+          ]
+        },
+        {
+          "name": "score_customer_risk",
+          "description": "Scores overall customer fraud risk using multi-dimensional behavioral signals",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "risk-score",
+            "customer",
+            "aml"
+          ]
+        },
+        {
+          "name": "analyze_pattern",
+          "description": "Analyzes transaction patterns to identify organized fraud rings or mule networks",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "pattern",
+            "network",
+            "aml"
+          ]
+        },
+        {
+          "name": "detect_identity_theft",
+          "description": "Detects identity theft using document forgery, biometric, and behavioral signals",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "identity",
+            "theft",
+            "kyc"
+          ]
+        },
+        {
+          "name": "flag_login_risk",
+          "description": "Flags risky login attempts based on device, location, and behavioral signals",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "login",
+            "authentication",
+            "risk"
+          ]
+        },
+        {
+          "name": "assess_geo_risk",
+          "description": "Assesses geographic risk for a transaction based on origin country and destination",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "geo",
+            "country-risk",
+            "aml"
+          ]
+        },
+        {
+          "name": "evaluate_merchant_risk",
+          "description": "Evaluates merchant risk profile for acquiring banks and payment aggregators",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "merchant",
+            "acquiring",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "monitor_velocity_fraud",
+          "description": "Monitors transaction velocity to detect card testing and rapid-fire fraud attacks",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "velocity",
+            "card",
+            "realtime"
+          ]
+        },
+        {
+          "name": "detect_card_skimming",
+          "description": "Detects card skimming patterns from ATM and POS transaction data",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "skimming",
+            "card",
+            "atm"
+          ]
+        },
+        {
+          "name": "identify_mule_account",
+          "description": "Identifies accounts being used as money mule conduits in layering schemes",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "mule",
+            "aml",
+            "pmla"
+          ]
+        },
+        {
+          "name": "track_fraud_trend",
+          "description": "Tracks emerging fraud trends and updates risk models proactively",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "trend",
+            "adaptive",
+            "fraud"
+          ]
+        },
+        {
+          "name": "trigger_fraud_alert",
+          "description": "Triggers a real-time fraud alert to the customer and operations team",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "alert",
+            "realtime",
+            "notification"
+          ]
+        },
+        {
+          "name": "detect_account_takeover",
+          "description": "Detects account takeover attempts using device fingerprint and behavioral biometrics",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "ato",
+            "account",
+            "security"
+          ]
+        },
+        {
+          "name": "detect_bot",
+          "description": "Detects automated bot activity in payment and login flows",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "bot",
+            "automation",
+            "security"
+          ]
+        },
+        {
+          "name": "verify_device",
+          "description": "Verifies device trustworthiness using fingerprint and risk signals",
+          "riskLevel": "HIGH",
+          "slaMs": 150,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "device",
+            "trust",
+            "authentication"
+          ]
+        },
+        {
+          "name": "score_transaction_risk",
+          "description": "Scores individual transaction risk in real time for approval or decline decision",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "risk-score",
+            "realtime",
+            "transaction"
+          ]
+        },
+        {
+          "name": "detect_phishing",
+          "description": "Detects phishing attempts targeting customers through communication channel analysis",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "phishing",
+            "security",
+            "customer"
+          ]
+        },
+        {
+          "name": "monitor_dark_web",
+          "description": "Monitors dark web for leaked customer credentials and card data",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "dark-web",
+            "credential",
+            "monitoring"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "COMPLIANCE",
+      "displayName": "Compliance",
+      "description": "KYC, sanctions screening, regulatory monitoring and policy enforcement",
+      "defaultSlaMs": 500,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "RBI KYC Master Direction 2016, PMLA 2002, DPDP Act 2023",
+      "intents": [
+        {
+          "name": "kyc_verification",
+          "description": "Performs end-to-end KYC verification using Aadhaar, PAN, and document checks",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "kyc",
+            "aadhaar",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "validate_document",
+          "description": "Validates identity and address documents for authenticity and completeness",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "document",
+            "validation",
+            "kyc"
+          ]
+        },
+        {
+          "name": "screen_sanctions",
+          "description": "Screens customers and transactions against OFAC, UN, and RBI sanction lists",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "sanctions",
+            "ofac",
+            "pmla"
+          ]
+        },
+        {
+          "name": "check_pep",
+          "description": "Checks if a customer is a Politically Exposed Person requiring enhanced due diligence",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "pep",
+            "edd",
+            "aml"
+          ]
+        },
+        {
+          "name": "monitor_compliance",
+          "description": "Continuously monitors operational compliance against regulatory rules",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "monitoring",
+            "regulatory"
+          ]
+        },
+        {
+          "name": "generate_compliance_report",
+          "description": "Generates regulatory compliance reports for internal and external submission",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "reporting",
+            "regulatory",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "audit_trail",
+          "description": "Creates an immutable audit trail for all regulated decisions and transactions",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "audit",
+            "immutable",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "validate_regulation",
+          "description": "Validates a proposed action or product against applicable regulatory requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "regulatory",
+            "validation"
+          ]
+        },
+        {
+          "name": "detect_gdpr_violation",
+          "description": "Detects potential GDPR or DPDP Act violations in data processing activities",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "gdpr",
+            "dpdp",
+            "data-privacy"
+          ]
+        },
+        {
+          "name": "enforce_policy",
+          "description": "Enforces business and regulatory policies on transactions and decisions",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "policy",
+            "enforcement"
+          ]
+        },
+        {
+          "name": "track_audit_log",
+          "description": "Tracks and indexes all system audit logs for compliance and investigation",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "audit",
+            "log",
+            "investigation"
+          ]
+        },
+        {
+          "name": "verify_onboarding",
+          "description": "Verifies all onboarding requirements are met before activating a customer",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "onboarding",
+            "kyc",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "monitor_suspicious_activity",
+          "description": "Monitors for suspicious transaction activity requiring STR filing under PMLA",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "str",
+            "pmla",
+            "aml"
+          ]
+        },
+        {
+          "name": "file_regulatory_report",
+          "description": "Files mandatory regulatory reports such as CTR, STR, and NPA disclosures",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "ctr",
+            "str",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "check_legality",
+          "description": "Checks legality of a proposed transaction or business activity",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "legal",
+            "compliance"
+          ]
+        },
+        {
+          "name": "verify_beneficial_owner",
+          "description": "Verifies the ultimate beneficial owner of a corporate customer per PMLA",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "ubo",
+            "pmla",
+            "kyc"
+          ]
+        },
+        {
+          "name": "conduct_edd",
+          "description": "Conducts Enhanced Due Diligence for high-risk customers or transactions",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "edd",
+            "high-risk",
+            "aml"
+          ]
+        },
+        {
+          "name": "assess_country_risk",
+          "description": "Assesses country risk for cross-border transactions using FATF and RBI guidance",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "country-risk",
+            "fatf",
+            "fema"
+          ]
+        },
+        {
+          "name": "check_fatf",
+          "description": "Checks if a jurisdiction is on FATF grey or black list and applies enhanced controls",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fatf",
+            "aml",
+            "sanctions"
+          ]
+        },
+        {
+          "name": "monitor_transaction_reporting",
+          "description": "Monitors transaction reporting thresholds for CTR and mandatory filing obligations",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "ctr",
+            "threshold",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "validate_aml_rules",
+          "description": "Validates AML detection rules against current PMLA and RBI guidelines",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "aml",
+            "validation",
+            "pmla"
+          ]
+        },
+        {
+          "name": "assess_tax_compliance",
+          "description": "Assesses customer or transaction tax compliance including TDS and GST obligations",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "tax",
+            "gst",
+            "tds",
+            "compliance"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "PROCUREMENT",
+      "displayName": "Procurement",
+      "description": "Vendor management, contract validation, purchase order lifecycle and spend optimization",
+      "defaultSlaMs": 400,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "Companies Act 2013, GST Act 2017",
+      "intents": [
+        {
+          "name": "evaluate_vendor",
+          "description": "Evaluates vendor quality, financial health, and compliance for onboarding",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "vendor",
+            "evaluation",
+            "sourcing"
+          ]
+        },
+        {
+          "name": "approve_vendor",
+          "description": "Approves a vendor for the approved vendor list after due diligence",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "vendor",
+            "approval",
+            "sourcing"
+          ]
+        },
+        {
+          "name": "detect_vendor_fraud",
+          "description": "Detects fraudulent vendor activity including phantom vendors and invoice fraud",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fraud",
+            "vendor",
+            "ap"
+          ]
+        },
+        {
+          "name": "score_vendor",
+          "description": "Scores vendor performance on quality, delivery, and compliance metrics",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "score",
+            "performance",
+            "vendor"
+          ]
+        },
+        {
+          "name": "select_vendor",
+          "description": "Selects the optimal vendor for a procurement requirement using multi-criteria analysis",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "selection",
+            "sourcing"
+          ]
+        },
+        {
+          "name": "monitor_vendor",
+          "description": "Continuously monitors vendor performance and compliance post-onboarding",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "monitoring",
+            "vendor",
+            "ongoing"
+          ]
+        },
+        {
+          "name": "validate_contract",
+          "description": "Validates contract terms against approved templates and regulatory requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "contract",
+            "validation",
+            "legal"
+          ]
+        },
+        {
+          "name": "detect_supplier_anomaly",
+          "description": "Detects anomalous supplier behavior including sudden price changes or delivery failures",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "anomaly",
+            "supplier",
+            "risk"
+          ]
+        },
+        {
+          "name": "optimize_procurement",
+          "description": "Optimizes procurement decisions for cost, quality, and supply chain resilience",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "low_cost",
+          "tags": [
+            "optimization",
+            "cost",
+            "sourcing"
+          ]
+        },
+        {
+          "name": "track_vendor_payment",
+          "description": "Tracks vendor payment status and alerts on overdue payments",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "payment",
+            "tracking",
+            "ap"
+          ]
+        },
+        {
+          "name": "assess_supplier",
+          "description": "Assesses supplier capability and risk for strategic sourcing decisions",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "assessment",
+            "strategic",
+            "sourcing"
+          ]
+        },
+        {
+          "name": "rank_vendor",
+          "description": "Ranks vendors for a category based on weighted performance and compliance scores",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "ranking",
+            "sourcing",
+            "scoring"
+          ]
+        },
+        {
+          "name": "audit_vendor",
+          "description": "Conducts a vendor compliance audit covering GST, TDS, and contractual obligations",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "audit",
+            "gst",
+            "tds",
+            "compliance"
+          ]
+        },
+        {
+          "name": "flag_supplier_risk",
+          "description": "Flags suppliers with financial distress, legal issues, or compliance breaches",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "risk",
+            "supplier",
+            "early-warning"
+          ]
+        },
+        {
+          "name": "renew_contract",
+          "description": "Evaluates contract renewal eligibility based on performance and market benchmarks",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "renewal",
+            "contract",
+            "vendor"
+          ]
+        },
+        {
+          "name": "generate_purchase_order",
+          "description": "Generates a purchase order from approved requisition with auto-populated vendor terms",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "po",
+            "generation",
+            "automation"
+          ]
+        },
+        {
+          "name": "approve_purchase_order",
+          "description": "Approves a purchase order based on budget availability and approval authority matrix",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "po",
+            "approval",
+            "workflow"
+          ]
+        },
+        {
+          "name": "track_delivery",
+          "description": "Tracks goods or service delivery status against purchase order commitments",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "delivery",
+            "tracking",
+            "po"
+          ]
+        },
+        {
+          "name": "manage_spend",
+          "description": "Analyzes and manages organizational spend by category, vendor, and business unit",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "spend",
+            "analytics",
+            "cost"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "INVESTMENTS",
+      "displayName": "Investments",
+      "description": "Portfolio management, trading, risk-adjusted returns and market analysis",
+      "defaultSlaMs": 300,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "SEBI Investment Adviser Regulations 2013, SEBI PMS Regulations",
+      "intents": [
+        {
+          "name": "recommend_portfolio",
+          "description": "Recommends an investment portfolio aligned to risk profile and financial goals",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "portfolio",
+            "recommendation",
+            "sebi"
+          ]
+        },
+        {
+          "name": "execute_trade",
+          "description": "Executes a trade order with pre-trade compliance and best execution checks",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "trade",
+            "execution",
+            "sebi"
+          ]
+        },
+        {
+          "name": "detect_market_anomaly",
+          "description": "Detects market anomalies including flash crashes and unusual price movements",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "market",
+            "anomaly",
+            "surveillance"
+          ]
+        },
+        {
+          "name": "risk_adjusted_return",
+          "description": "Calculates risk-adjusted return metrics including Sharpe ratio and alpha",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "risk",
+            "return",
+            "performance"
+          ]
+        },
+        {
+          "name": "trigger_stop_loss",
+          "description": "Triggers a stop-loss order when portfolio loss threshold is breached",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "stop-loss",
+            "risk",
+            "realtime"
+          ]
+        },
+        {
+          "name": "optimize_portfolio",
+          "description": "Optimizes portfolio allocation using modern portfolio theory and constraints",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "optimization",
+            "portfolio",
+            "sebi"
+          ]
+        },
+        {
+          "name": "predict_stock",
+          "description": "Predicts short-term stock price direction using technical and fundamental signals",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "prediction",
+            "equity",
+            "trading"
+          ]
+        },
+        {
+          "name": "analyze_sentiment",
+          "description": "Analyzes market sentiment from news, social media, and analyst reports",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "sentiment",
+            "nlp",
+            "market"
+          ]
+        },
+        {
+          "name": "balance_portfolio",
+          "description": "Rebalances portfolio to target allocation after market movements",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "rebalancing",
+            "portfolio"
+          ]
+        },
+        {
+          "name": "allocate_assets",
+          "description": "Allocates assets across classes based on risk tolerance and market outlook",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "asset-allocation",
+            "portfolio"
+          ]
+        },
+        {
+          "name": "detect_arbitrage",
+          "description": "Detects arbitrage opportunities across markets and instruments",
+          "riskLevel": "HIGH",
+          "slaMs": 100,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "arbitrage",
+            "trading",
+            "sebi"
+          ]
+        },
+        {
+          "name": "evaluate_fund",
+          "description": "Evaluates mutual fund or AIF performance against benchmark and peer group",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fund",
+            "evaluation",
+            "sebi"
+          ]
+        },
+        {
+          "name": "track_volatility",
+          "description": "Tracks portfolio and market volatility for risk management decisions",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "volatility",
+            "risk",
+            "monitoring"
+          ]
+        },
+        {
+          "name": "rebalance_portfolio",
+          "description": "Executes portfolio rebalancing trades to restore target weights",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "rebalancing",
+            "trading"
+          ]
+        },
+        {
+          "name": "manage_exposure",
+          "description": "Manages portfolio exposure to specific sectors, geographies, and risk factors",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "exposure",
+            "risk",
+            "portfolio"
+          ]
+        },
+        {
+          "name": "calculate_var",
+          "description": "Calculates Value at Risk for portfolio using historical simulation or Monte Carlo",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "var",
+            "risk",
+            "sebi"
+          ]
+        },
+        {
+          "name": "assess_esg",
+          "description": "Assesses ESG scores and sustainability risks of portfolio holdings",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "esg",
+            "sustainability",
+            "sebi"
+          ]
+        },
+        {
+          "name": "backtest_strategy",
+          "description": "Backtests investment strategy against historical market data",
+          "riskLevel": "MEDIUM",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "backtest",
+            "strategy",
+            "quant"
+          ]
+        },
+        {
+          "name": "monitor_market_risk",
+          "description": "Monitors portfolio market risk in real time against limit breaches",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "market-risk",
+            "monitoring",
+            "realtime"
+          ]
+        },
+        {
+          "name": "optimize_tax_loss",
+          "description": "Identifies tax loss harvesting opportunities in the portfolio",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "low_cost",
+          "tags": [
+            "tax",
+            "harvesting",
+            "portfolio"
+          ]
+        },
+        {
+          "name": "generate_trade_report",
+          "description": "Generates trade confirmation and regulatory reporting for SEBI and exchange submission",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "reporting",
+            "sebi",
+            "trade"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "CUSTOMER_OPS",
+      "displayName": "Customer Operations",
+      "description": "Customer lifecycle, personalization, churn prevention and support routing",
+      "defaultSlaMs": 300,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "RBI Customer Service Guidelines, Consumer Protection Act 2019",
+      "intents": [
+        {
+          "name": "recommend_product",
+          "description": "Recommends the most suitable financial product based on customer profile and needs",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "recommendation",
+            "personalization"
+          ]
+        },
+        {
+          "name": "detect_churn",
+          "description": "Detects customers at high risk of churn and triggers retention interventions",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "churn",
+            "retention",
+            "prediction"
+          ]
+        },
+        {
+          "name": "personalize_offer",
+          "description": "Personalizes product offers and pricing based on customer lifetime value and behavior",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "personalization",
+            "offer",
+            "marketing"
+          ]
+        },
+        {
+          "name": "resolve_customer_dispute",
+          "description": "Resolves customer dispute through AI-assisted investigation and resolution workflow",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "dispute",
+            "rbi-required",
+            "ombudsman"
+          ]
+        },
+        {
+          "name": "generate_support",
+          "description": "Generates accurate support responses for customer queries using knowledge base",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "support",
+            "nlp",
+            "customer"
+          ]
+        },
+        {
+          "name": "analyze_sentiment_customer",
+          "description": "Analyzes customer sentiment from interactions to identify dissatisfaction signals",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "sentiment",
+            "cx",
+            "monitoring"
+          ]
+        },
+        {
+          "name": "segment_customer",
+          "description": "Segments customers into behavioral and value cohorts for targeted interventions",
+          "riskLevel": "LOW",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "segmentation",
+            "analytics"
+          ]
+        },
+        {
+          "name": "detect_upsell",
+          "description": "Detects upsell and cross-sell opportunities based on product usage and lifecycle stage",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "upsell",
+            "revenue",
+            "cx"
+          ]
+        },
+        {
+          "name": "track_engagement",
+          "description": "Tracks customer engagement across channels and identifies drop-off points",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "engagement",
+            "analytics",
+            "cx"
+          ]
+        },
+        {
+          "name": "recommend_card",
+          "description": "Recommends the most suitable credit or debit card based on spending behavior",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "card",
+            "recommendation",
+            "personalization"
+          ]
+        },
+        {
+          "name": "offer_upgrade",
+          "description": "Offers product or plan upgrade to eligible customers at optimal moments",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "upgrade",
+            "revenue",
+            "cx"
+          ]
+        },
+        {
+          "name": "predict_clv",
+          "description": "Predicts customer lifetime value for prioritization and resource allocation",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "clv",
+            "prediction",
+            "analytics"
+          ]
+        },
+        {
+          "name": "detect_dissatisfaction",
+          "description": "Detects customer dissatisfaction signals before they result in complaints or churn",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "dissatisfaction",
+            "early-warning",
+            "cx"
+          ]
+        },
+        {
+          "name": "route_support",
+          "description": "Routes customer support queries to the most appropriate agent or automated flow",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "routing",
+            "support",
+            "cx"
+          ]
+        },
+        {
+          "name": "optimize_retention",
+          "description": "Optimizes retention offers for at-risk customers balancing cost and retention probability",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "retention",
+            "optimization",
+            "cx"
+          ]
+        },
+        {
+          "name": "onboard_customer",
+          "description": "Manages end-to-end customer onboarding including KYC, account setup, and welcome flow",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "onboarding",
+            "kyc",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "verify_identity",
+          "description": "Verifies customer identity using Aadhaar, PAN, and biometric validation",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "identity",
+            "verification",
+            "kyc"
+          ]
+        },
+        {
+          "name": "close_account",
+          "description": "Manages account closure workflow with compliance checks and final settlement",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "closure",
+            "compliance",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "handle_complaint",
+          "description": "Handles customer complaint per RBI turnaround time guidelines with escalation path",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "complaint",
+            "rbi-required",
+            "ombudsman"
+          ]
+        },
+        {
+          "name": "generate_statement",
+          "description": "Generates account statement for customer on demand or scheduled delivery",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "statement",
+            "reporting",
+            "customer"
+          ]
+        },
+        {
+          "name": "update_kyc",
+          "description": "Updates customer KYC records during periodic re-KYC or when details change",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "kyc",
+            "re-kyc",
+            "rbi-required"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "RECONCILIATION",
+      "displayName": "Reconciliation",
+      "description": "Transaction matching, ledger reconciliation and period close",
+      "defaultSlaMs": 500,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "RBI Accounting Standards, Companies Act 2013 Financial Reporting",
+      "intents": [
+        {
+          "name": "reconcile_transaction",
+          "description": "Reconciles individual transactions between internal ledger and external statements",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "reconciliation",
+            "ledger"
+          ]
+        },
+        {
+          "name": "match_ledger",
+          "description": "Matches ledger entries across systems using fuzzy and exact matching algorithms",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "matching",
+            "ledger",
+            "accounting"
+          ]
+        },
+        {
+          "name": "detect_recon_gap",
+          "description": "Detects reconciliation gaps and breaks requiring investigation",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "gap",
+            "break",
+            "audit"
+          ]
+        },
+        {
+          "name": "resolve_mismatch",
+          "description": "Resolves reconciliation mismatches through automated investigation and adjustment",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "mismatch",
+            "resolution",
+            "audit"
+          ]
+        },
+        {
+          "name": "automate_settlement",
+          "description": "Automates settlement between counterparties based on net positions",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "settlement",
+            "automation",
+            "treasury"
+          ]
+        },
+        {
+          "name": "validate_entries",
+          "description": "Validates journal entries for accuracy, completeness, and authorization",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "journal",
+            "validation",
+            "accounting"
+          ]
+        },
+        {
+          "name": "track_unmatched",
+          "description": "Tracks unmatched items in reconciliation queues with aging and escalation",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "unmatched",
+            "aging",
+            "recon"
+          ]
+        },
+        {
+          "name": "identify_breaks",
+          "description": "Identifies reconciliation breaks across payment, custody, and accounting systems",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "breaks",
+            "recon",
+            "audit"
+          ]
+        },
+        {
+          "name": "adjust_ledger",
+          "description": "Posts approved adjusting entries to resolve reconciliation differences",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "adjustment",
+            "ledger",
+            "accounting"
+          ]
+        },
+        {
+          "name": "close_books",
+          "description": "Executes period-end book close checklist with automated reconciliation sign-off",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "close",
+            "period-end",
+            "accounting"
+          ]
+        },
+        {
+          "name": "reconcile_bank",
+          "description": "Reconciles bank account statements against internal cash ledger balances",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "bank-recon",
+            "cash",
+            "accounting"
+          ]
+        },
+        {
+          "name": "reconcile_intercompany",
+          "description": "Reconciles intercompany balances and transactions for elimination in consolidation",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "intercompany",
+            "consolidation",
+            "accounting"
+          ]
+        },
+        {
+          "name": "validate_nostro",
+          "description": "Validates nostro account positions against correspondent bank confirmations",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "nostro",
+            "correspondent",
+            "forex"
+          ]
+        },
+        {
+          "name": "reconcile_tax",
+          "description": "Reconciles tax liabilities including GST, TDS, and advance tax against returns filed",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "tax",
+            "gst",
+            "tds",
+            "reconciliation"
+          ]
+        },
+        {
+          "name": "perform_period_close",
+          "description": "Manages the month-end and year-end close process with automated validation checks",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "period-close",
+            "accounting",
+            "audit"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "BILLING",
+      "displayName": "Billing",
+      "description": "Usage billing, subscription management, tax application and revenue tracking",
+      "defaultSlaMs": 300,
+      "defaultRiskLevel": "LOW",
+      "regulatoryRef": "GST Act 2017, Income Tax Act TDS Provisions",
+      "intents": [
+        {
+          "name": "calculate_usage",
+          "description": "Calculates product or service usage for billing based on metering data",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "usage",
+            "metering",
+            "saas"
+          ]
+        },
+        {
+          "name": "generate_bill",
+          "description": "Generates a GST-compliant bill for usage or subscription charges",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "bill",
+            "gst",
+            "generation"
+          ]
+        },
+        {
+          "name": "detect_revenue_leakage",
+          "description": "Detects unbilled usage, discounting errors, and revenue leakage patterns",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "revenue",
+            "leakage",
+            "audit"
+          ]
+        },
+        {
+          "name": "optimize_pricing",
+          "description": "Optimizes pricing tiers and packaging based on customer willingness to pay signals",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "pricing",
+            "optimization",
+            "revenue"
+          ]
+        },
+        {
+          "name": "forecast_revenue",
+          "description": "Forecasts recurring revenue based on subscription cohorts and churn predictions",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "mrr",
+            "arr",
+            "forecast"
+          ]
+        },
+        {
+          "name": "apply_tax",
+          "description": "Applies correct GST, TDS, and surcharges to billing based on product and customer type",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "tax",
+            "gst",
+            "tds",
+            "compliance"
+          ]
+        },
+        {
+          "name": "invoice_customer",
+          "description": "Generates and sends invoice to customer with payment link and due date",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "invoice",
+            "billing",
+            "ar"
+          ]
+        },
+        {
+          "name": "track_subscription",
+          "description": "Tracks subscription lifecycle including trials, renewals, and cancellations",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "subscription",
+            "saas",
+            "lifecycle"
+          ]
+        },
+        {
+          "name": "prorate_charges",
+          "description": "Calculates prorated charges for mid-cycle subscription changes",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "proration",
+            "subscription",
+            "billing"
+          ]
+        },
+        {
+          "name": "audit_billing",
+          "description": "Audits billing records for accuracy, compliance, and revenue assurance",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "audit",
+            "accuracy",
+            "compliance"
+          ]
+        },
+        {
+          "name": "process_renewal",
+          "description": "Processes subscription renewal with updated pricing and terms",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "renewal",
+            "subscription"
+          ]
+        },
+        {
+          "name": "upgrade_plan",
+          "description": "Upgrades customer to a higher plan tier with prorated billing",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "upgrade",
+            "subscription",
+            "revenue"
+          ]
+        },
+        {
+          "name": "downgrade_plan",
+          "description": "Downgrades customer plan with credit note or prorated refund",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "downgrade",
+            "subscription",
+            "churn"
+          ]
+        },
+        {
+          "name": "issue_refund",
+          "description": "Issues a billing refund after approval and posts credit note",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "refund",
+            "credit-note",
+            "billing"
+          ]
+        },
+        {
+          "name": "handle_payment_failure",
+          "description": "Handles failed subscription payment with dunning and grace period logic",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "dunning",
+            "failure",
+            "subscription"
+          ]
+        },
+        {
+          "name": "apply_coupon",
+          "description": "Applies discount coupon or promotional code to billing",
+          "riskLevel": "LOW",
+          "slaMs": 100,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "coupon",
+            "discount",
+            "promotion"
+          ]
+        },
+        {
+          "name": "generate_receipt",
+          "description": "Generates payment receipt with GST details for customer download",
+          "riskLevel": "LOW",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "receipt",
+            "gst",
+            "billing"
+          ]
+        },
+        {
+          "name": "validate_billing_info",
+          "description": "Validates customer billing information including GSTIN, PAN, and address",
+          "riskLevel": "MEDIUM",
+          "slaMs": 200,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "validation",
+            "gstin",
+            "compliance"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "INSURANCE",
+      "displayName": "Insurance",
+      "description": "Policy underwriting, claims processing and insurance risk assessment",
+      "defaultSlaMs": 600,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "IRDAI Regulations, Insurance Act 1938",
+      "intents": [
+        {
+          "name": "assess_insurance_risk",
+          "description": "Assesses insurance risk for a proposed policy using applicant data and actuarial models",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "underwriting",
+            "risk",
+            "irdai"
+          ]
+        },
+        {
+          "name": "process_claim",
+          "description": "Processes an insurance claim through validation, investigation, and settlement workflow",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "claims",
+            "settlement",
+            "irdai"
+          ]
+        },
+        {
+          "name": "detect_claim_fraud",
+          "description": "Detects fraudulent insurance claims using pattern recognition and historical data",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "fraud",
+            "claims",
+            "irdai"
+          ]
+        },
+        {
+          "name": "calculate_premium",
+          "description": "Calculates insurance premium based on risk profile, coverage, and actuarial tables",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "premium",
+            "pricing",
+            "irdai"
+          ]
+        },
+        {
+          "name": "underwrite_policy",
+          "description": "Underwrites an insurance policy after risk assessment and terms determination",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "underwriting",
+            "policy",
+            "irdai"
+          ]
+        },
+        {
+          "name": "renew_policy",
+          "description": "Evaluates policy renewal eligibility and generates renewal offer with updated premium",
+          "riskLevel": "MEDIUM",
+          "slaMs": 400,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "renewal",
+            "policy",
+            "irdai"
+          ]
+        },
+        {
+          "name": "validate_claim",
+          "description": "Validates claim documents and coverage eligibility before processing",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "validation",
+            "claims",
+            "irdai"
+          ]
+        },
+        {
+          "name": "approve_claim",
+          "description": "Approves a validated insurance claim for settlement payment",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "approval",
+            "claims",
+            "irdai"
+          ]
+        },
+        {
+          "name": "reject_claim",
+          "description": "Rejects a claim with documented reason and appeal information per IRDAI guidelines",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "rejection",
+            "claims",
+            "irdai"
+          ]
+        },
+        {
+          "name": "monitor_policy",
+          "description": "Monitors active policy portfolio for risk concentration and lapse prediction",
+          "riskLevel": "MEDIUM",
+          "slaMs": 500,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "monitoring",
+            "portfolio",
+            "irdai"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "REPORTING",
+      "displayName": "Reporting",
+      "description": "Financial, regulatory, management and board reporting",
+      "defaultSlaMs": 600,
+      "defaultRiskLevel": "MEDIUM",
+      "regulatoryRef": "Companies Act 2013, SEBI LODR, RBI Regulatory Reporting",
+      "intents": [
+        {
+          "name": "generate_financial_report",
+          "description": "Generates financial statements including P&L, balance sheet, and cash flow",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "financial",
+            "statements",
+            "audit"
+          ]
+        },
+        {
+          "name": "generate_regulatory_report",
+          "description": "Generates regulatory reports for RBI, SEBI, IRDAI submission",
+          "riskLevel": "HIGH",
+          "slaMs": 800,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "regulatory",
+            "rbi-required",
+            "sebi"
+          ]
+        },
+        {
+          "name": "consolidate_accounts",
+          "description": "Consolidates accounts across entities for group financial reporting",
+          "riskLevel": "HIGH",
+          "slaMs": 900,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "consolidation",
+            "group",
+            "ifrs"
+          ]
+        },
+        {
+          "name": "generate_tax_report",
+          "description": "Generates tax reports including ITR data, GST returns, and TDS certificates",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "tax",
+            "gst",
+            "tds",
+            "compliance"
+          ]
+        },
+        {
+          "name": "generate_management_report",
+          "description": "Generates management reports with KPIs, variance analysis, and commentary",
+          "riskLevel": "MEDIUM",
+          "slaMs": 600,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "management",
+            "kpi",
+            "analytics"
+          ]
+        },
+        {
+          "name": "validate_report",
+          "description": "Validates financial reports for accuracy, completeness, and regulatory compliance",
+          "riskLevel": "HIGH",
+          "slaMs": 500,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "validation",
+            "accuracy",
+            "audit"
+          ]
+        },
+        {
+          "name": "distribute_report",
+          "description": "Distributes reports to authorized stakeholders through secure channels",
+          "riskLevel": "MEDIUM",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "distribution",
+            "access-control"
+          ]
+        },
+        {
+          "name": "archive_report",
+          "description": "Archives reports with tamper-proof storage for regulatory retention requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "archive",
+            "retention",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "generate_board_report",
+          "description": "Generates board-level reports with strategic metrics and risk summaries",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "board",
+            "governance",
+            "strategy"
+          ]
+        },
+        {
+          "name": "track_kpi",
+          "description": "Tracks key performance indicators against targets with trend analysis",
+          "riskLevel": "LOW",
+          "slaMs": 300,
+          "defaultPolicy": "balanced",
+          "tags": [
+            "kpi",
+            "performance",
+            "analytics"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "RISK_MANAGEMENT",
+      "displayName": "Risk Management",
+      "description": "Enterprise risk — operational, credit, market risk and capital adequacy",
+      "defaultSlaMs": 600,
+      "defaultRiskLevel": "HIGH",
+      "regulatoryRef": "RBI Basel III Guidelines, ICAAP Requirements",
+      "intents": [
+        {
+          "name": "assess_operational_risk",
+          "description": "Assesses operational risks including process failures, system outages, and human errors",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "operational",
+            "risk",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "assess_credit_risk",
+          "description": "Assesses overall credit risk exposure of the loan portfolio",
+          "riskLevel": "HIGH",
+          "slaMs": 600,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "credit",
+            "risk",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "monitor_concentration_risk",
+          "description": "Monitors concentration risk across sectors, geographies, and single borrowers",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "concentration",
+            "rbi-required",
+            "basel"
+          ]
+        },
+        {
+          "name": "stress_test",
+          "description": "Runs stress test scenarios on portfolio to assess resilience under adverse conditions",
+          "riskLevel": "HIGH",
+          "slaMs": 900,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "stress-test",
+            "rbi-required",
+            "icaap"
+          ]
+        },
+        {
+          "name": "calculate_capital_adequacy",
+          "description": "Calculates capital adequacy ratios (CRAR) per Basel III requirements",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "crar",
+            "capital",
+            "rbi-required",
+            "basel"
+          ]
+        },
+        {
+          "name": "monitor_limit_breach",
+          "description": "Monitors risk limit utilization and triggers alerts on threshold breaches",
+          "riskLevel": "HIGH",
+          "slaMs": 200,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "limits",
+            "monitoring",
+            "realtime"
+          ]
+        },
+        {
+          "name": "generate_risk_report",
+          "description": "Generates enterprise risk reports for board, regulator, and management",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "reporting",
+            "risk",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "assess_model_risk",
+          "description": "Assesses risk arising from the use of financial and AI models in decision-making",
+          "riskLevel": "HIGH",
+          "slaMs": 700,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "model-risk",
+            "validation",
+            "rbi-required"
+          ]
+        },
+        {
+          "name": "track_risk_appetite",
+          "description": "Tracks risk appetite metrics against board-approved thresholds and tolerance levels",
+          "riskLevel": "HIGH",
+          "slaMs": 400,
+          "defaultPolicy": "high_accuracy",
+          "tags": [
+            "appetite",
+            "governance",
+            "board"
+          ]
+        },
+        {
+          "name": "escalate_risk",
+          "description": "Escalates risk events to appropriate authority level based on severity and policy",
+          "riskLevel": "HIGH",
+          "slaMs": 300,
+          "defaultPolicy": "low_latency",
+          "tags": [
+            "escalation",
+            "governance",
+            "realtime"
+          ]
+        }
+      ]
+    }
+  ]
+}
