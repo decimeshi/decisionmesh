@@ -49,15 +49,18 @@ public class AdapterRegistry {
             FROM adapters a
             LEFT JOIN adapter_performance_profiles p
                    ON p.adapter_id = a.id
-                  AND p.tenant_id  = a.tenant_id
-            WHERE a.tenant_id    = ?
+                  AND (p.tenant_id = a.tenant_id OR a.tenant_id IS NULL)
+            WHERE (a.tenant_id = ? OR a.tenant_id IS NULL)
               AND a.is_active    = true
               AND a.adapter_type = 'LLM'
               AND (
                   a.allowed_intent_types = '[]'::jsonb
                   OR a.allowed_intent_types @> to_jsonb(?::text)
               )
-            ORDER BY COALESCE(p.composite_score, 0.4) DESC
+            ORDER BY
+                -- Tenant-specific adapters preferred over platform-wide
+                (a.tenant_id IS NULL) ASC,
+                COALESCE(p.composite_score, 0.4) DESC
             """;
     // ORDER BY uses 0.4 as cold-start prior — slightly below the AdapterStats 0.5 in-memory prior
     // so DB-ordered cold adapters appear after adapters with any positive execution history.

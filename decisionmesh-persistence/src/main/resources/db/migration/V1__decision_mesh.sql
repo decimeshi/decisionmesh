@@ -236,11 +236,10 @@ CREATE INDEX idx_api_keys_key_hash ON api_keys (key_hash);
 -- ============================================================
 -- ADAPTERS
 -- ============================================================
-
 CREATE TABLE adapters
 (
     id                   UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
-    tenant_id            UUID         NOT NULL REFERENCES tenants (id) ON DELETE CASCADE,
+    tenant_id            UUID REFERENCES tenants (id) ON DELETE CASCADE,
     name                 VARCHAR(255) NOT NULL,
     adapter_type         VARCHAR(100)
         CHECK (adapter_type IN ('LLM', 'EMBEDDING', 'TOOL', 'RETRIEVAL',
@@ -1122,3 +1121,19 @@ ON adapters
 -- ============================================================
 -- DONE
 -- ============================================================
+INSERT INTO adapters (id, tenant_id, name, adapter_type, provider, model_id,
+                      is_active, allowed_intent_types, config, created_at, updated_at)
+VALUES ('a0000000-0000-0000-0000-000000000001',
+        NULL,
+        'Claude Haiku',
+        'LLM',
+        'ANTHROPIC',
+        'claude-haiku-4-5-20251001',
+        true,
+        '[]',
+        '{
+          "model": "claude-haiku-4-5-20251001",
+          "max_tokens": 1024
+        }',
+        NOW(),
+        NOW()) ON CONFLICT (id) DO NOTHING;

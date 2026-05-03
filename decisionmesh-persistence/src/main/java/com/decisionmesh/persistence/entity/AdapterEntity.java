@@ -40,8 +40,8 @@ public class AdapterEntity extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
-    @Column(name = "tenant_id", nullable = false)
-    public UUID tenantId;
+    @Column(name = "tenant_id", nullable = true)
+    public UUID tenantId; // NULL = platform-wide adapter available to all tenants
 
     @Column(name = "name", nullable = false, length = 255)
     public String name;
@@ -70,13 +70,15 @@ public class AdapterEntity extends PanacheEntityBase {
     @Column(name = "is_active", nullable = false)
     public boolean isActive = true;
 
-    // config and capabilityFlags: @JdbcTypeCode(SqlTypes.JSON) works for objects {}.
-    // ReactiveJsonJdbcType.toJsonObject() calls new JsonObject(value) which handles {} fine.
-    @JdbcTypeCode(SqlTypes.JSON)
+    // config and capabilityFlags: SqlTypes.VARCHAR bypasses ReactiveJsonJdbcType.
+    // The reactive PG client returns JsonObject for jsonb columns which causes
+    // ClassCastException when Hibernate tries to read it as String via VARCHAR.
+    // SqlTypes.VARCHAR binds as text and PostgreSQL casts implicitly to jsonb.
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "config", columnDefinition = "jsonb")
     public String config = "{}";
 
-    @JdbcTypeCode(SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "capability_flags", columnDefinition = "jsonb")
     public String capabilityFlags = "{}";
 

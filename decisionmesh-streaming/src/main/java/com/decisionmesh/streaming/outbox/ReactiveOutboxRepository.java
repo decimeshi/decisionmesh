@@ -39,7 +39,7 @@ public class ReactiveOutboxRepository implements OutboxRepository {
     private Uni<Void> insertOne(OutboxEvent event) {
         return client.preparedQuery("""
                 INSERT INTO event_outbox
-                    (id, aggregate_type, aggregate_id, event_type, payload, published, created_at)
+                    (id, aggregate_type, aggregate_id, event_type, payload_json, published, created_at)
                 VALUES ($1, $2, $3, $4, $5, false, $6)
                 ON CONFLICT (id) DO NOTHING
                 """)
@@ -59,7 +59,7 @@ public class ReactiveOutboxRepository implements OutboxRepository {
     @Override
     public Uni<List<OutboxEvent>> findUnpublished() {
         return client.preparedQuery("""
-                SELECT id, aggregate_type, aggregate_id, event_type, payload, published, created_at
+                SELECT id, aggregate_type, aggregate_id, event_type, payload_json, published, created_at
                 FROM   event_outbox
                 WHERE  published = false
                 ORDER  BY created_at
@@ -74,7 +74,7 @@ public class ReactiveOutboxRepository implements OutboxRepository {
                                 row.getString("aggregate_type"),
                                 row.getUUID("aggregate_id"),
                                 row.getString("event_type"),
-                                row.getString("payload"),
+                                row.getString("payload_json"),
                                 row.getBoolean("published"),
                                 row.getOffsetDateTime("created_at").toInstant()
                         ));
