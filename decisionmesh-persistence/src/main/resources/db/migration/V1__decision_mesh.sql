@@ -866,6 +866,49 @@ CREATE TABLE exploration_ledger
     timestamp   TIMESTAMPTZ      NOT NULL
 );
 
+CREATE TABLE user_feedback
+(
+    id         UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    user_id    UUID        NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    rating     SMALLINT    NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    category   VARCHAR(20) NOT NULL CHECK (category IN ('bug', 'feature', 'billing', 'general')),
+    comment    TEXT,
+    page       VARCHAR(255),
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index for querying by user and category
+CREATE INDEX idx_user_feedback_user_id ON user_feedback (user_id);
+CREATE INDEX idx_user_feedback_category ON user_feedback (category);
+CREATE INDEX idx_user_feedback_created_at ON user_feedback (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+                                              id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    gateway      VARCHAR(20)  NOT NULL CHECK (gateway IN ('stripe', 'razorpay')),
+    event_type   VARCHAR(100) NOT NULL,
+    payload      TEXT,
+    status       VARCHAR(20)  NOT NULL DEFAULT 'received'
+    CHECK (status IN ('received', 'processed', 'failed')),
+    error        TEXT,
+    org_id       UUID,
+    received_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    processed_at TIMESTAMPTZ
+    );
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_gateway
+    ON webhook_events(gateway);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_status
+    ON webhook_events(status);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_received_at
+    ON webhook_events(received_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_org_id
+    ON webhook_events(org_id)
+    WHERE org_id IS NOT NULL;
+
 -- ============================================================
 -- AUDIT TRIGGERS  (V2)
 --
