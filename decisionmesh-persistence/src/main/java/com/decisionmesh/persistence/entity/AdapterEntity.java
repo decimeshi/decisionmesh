@@ -6,10 +6,10 @@ import io.quarkus.hibernate.reactive.panache.PanacheEntityBase;
 import io.smallrye.mutiny.Uni;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.type.SqlTypes;
+import com.decisionmesh.persistence.type.VertxJsonbStringJdbcType;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -70,24 +70,27 @@ public class AdapterEntity extends PanacheEntityBase {
     @Column(name = "is_active", nullable = false)
     public boolean isActive = true;
 
-    // config and capabilityFlags: SqlTypes.VARCHAR bypasses ReactiveJsonJdbcType.
-    // The reactive PG client returns JsonObject for jsonb columns which causes
-    // ClassCastException when Hibernate tries to read it as String via VARCHAR.
-    // SqlTypes.VARCHAR binds as text and PostgreSQL casts implicitly to jsonb.
-    @JdbcTypeCode(SqlTypes.VARCHAR)
+    // JSONB fields mapped to String via VertxJsonbStringJdbcType.
+    //
+    // WHY NOT @JdbcTypeCode(SqlTypes.VARCHAR):
+    //   SqlTypes.VARCHAR makes Hibernate call getString() on the ResultSet.
+    //   Hibernate Reactive's Vert.x PG client decodes jsonb at the wire-protocol
+    //   level into JsonObject ({}) or JsonArray ([]) — getString() then throws:
+    //     ClassCastException: Invalid String value type class JsonArray
+    //
+    // FIX — VertxJsonbStringJdbcType:
+    //   Calls getObject() to get the raw Vert.x value, then toString() to convert.
+    //   JsonObject.toString() → "{...}"  |  JsonArray.toString() → "[...]"
+    //   Binds back to the DB as Types.OTHER — PostgreSQL casts text → jsonb.
+    @JdbcType(VertxJsonbStringJdbcType.class)
     @Column(name = "config", columnDefinition = "jsonb")
     public String config = "{}";
 
-    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @JdbcType(VertxJsonbStringJdbcType.class)
     @Column(name = "capability_flags", columnDefinition = "jsonb")
     public String capabilityFlags = "{}";
 
-    // allowedIntentTypes MUST NOT use @JdbcTypeCode(SqlTypes.JSON).
-    // ReactiveJsonJdbcType.toJsonObject() calls new JsonObject("[]") for arrays
-    // which throws DecodeException — JsonObject only handles {} not [].
-    // SqlTypes.VARCHAR bypasses ReactiveJsonJdbcType entirely: the String "[]"
-    // is bound as text and PostgreSQL casts it to jsonb implicitly.
-    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @JdbcType(VertxJsonbStringJdbcType.class)
     @Column(name = "allowed_intent_types", columnDefinition = "jsonb")
     public String allowedIntentTypes = "[]";
 
@@ -133,5 +136,26 @@ public class AdapterEntity extends PanacheEntityBase {
 
     public static Uni<AdapterEntity> findByTenantAndId(UUID tenantId, UUID adapterId) {
         return find("tenantId = ?1 and id = ?2", tenantId, adapterId).firstResult();
+    }
+
+    /**
+     * Returns all adapters visible to this tenant — both tenant-owned (BYOM)
+     * and global shared adapters (tenantId IS NULL, e.g. platform Claude Haiku).
+     * Tenant-owned adapters sort first; global ones follow.
+     *
+     * Used by AdapterResource LIST — read-only. Write operations (update/toggle/
+     * delete) still use findByTenantAndId() to prevent tenants mutating globals.
+     */
+    public static Uni<List<AdapterEntity>> findByTenantOrGlobal(UUID tenantId) {
+        return find("(tenantId = ?1 or tenantId is null) order by tenantId asc nulls last, createdAt asc", tenantId).list();
+    }
+
+    /**
+     * Returns active adapters visible to this tenant — both tenant-owned and global.
+     * Used by the execution engine (AdapterRepository.findActiveByTenant) to select
+     * which adapters are eligible for dispatching an intent.
+     */
+    public static Uni<List<AdapterEntity>> findActiveByTenantOrGlobal(UUID tenantId) {
+        return find("(tenantId = ?1 or tenantId is null) and isActive = true order by tenantId asc nulls last, name asc", tenantId).list();
     }
 }

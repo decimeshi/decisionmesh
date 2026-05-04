@@ -20,6 +20,13 @@ import java.util.UUID;
  *
  * FIX: AdapterEntity uses public fields (PanacheEntityBase pattern) —
  *      no setters exist. buildDefaultAdapter() uses direct field assignment.
+ *
+ * FIX (tenant_id IS NULL): Global adapters (tenant_id = NULL) are shared
+ *      across all tenants. Both findByTenant() and findActiveByTenant() now
+ *      include them via "tenantId = ?1 OR tenantId IS NULL".
+ *      Tenant-owned (BYOM) adapters sort first; global ones follow.
+ *      Write operations (update/toggle/delete via findById) remain
+ *      tenant-scoped — tenants cannot mutate global adapters.
  */
 @ApplicationScoped
 public class AdapterRepository {
@@ -35,19 +42,33 @@ public class AdapterRepository {
 
     // ── Standard CRUD ─────────────────────────────────────────────────────────
 
+    /**
+     * Lists adapters visible to this tenant:
+     *   - Tenant-owned adapters (tenantId = ?)      — BYOM
+     *   - Global shared adapters (tenantId IS NULL)  — e.g. Claude Haiku
+     *
+     * Tenant-owned adapters sort first so they appear above global ones in the UI.
+     * Write operations (update/toggle/delete) use findById() which is still
+     * tenant-scoped, preventing tenants from mutating global adapters.
+     */
     public Uni<List<AdapterEntity>> findByTenant(UUID tenantId) {
-        return AdapterEntity.findByTenant(tenantId);
+        return AdapterEntity.findByTenantOrGlobal(tenantId);
     }
 
     /**
-     * Returns active adapters for the tenant.
+     * Returns active adapters visible to this tenant (owned + global).
      *
-     * Falls back to a synthetic default Anthropic adapter when the tenant
-     * has no adapters configured. The synthetic adapter is NOT persisted —
-     * it exists only in memory for this execution.
+     * Falls back to a synthetic default Anthropic adapter ONLY when there
+     * are truly no active adapters at all — neither tenant-owned nor global.
+     * With a global adapter seeded in the DB this fallback should never fire,
+     * but is kept as a safety net for fresh environments.
+     *
+     * IMPORTANT: the synthetic fallback has a deterministic UUID derived from
+     * tenantId — it will NOT match any real adapter row. Once a global adapter
+     * is present in the DB this branch is unreachable and can be removed.
      */
     public Uni<List<AdapterEntity>> findActiveByTenant(UUID tenantId) {
-        return AdapterEntity.findActiveByTenant(tenantId)
+        return AdapterEntity.findActiveByTenantOrGlobal(tenantId)
                 .map(adapters -> {
                     if (!adapters.isEmpty()) {
                         return adapters;
@@ -59,6 +80,11 @@ public class AdapterRepository {
                 });
     }
 
+    /**
+     * Looks up a specific adapter by tenant + id.
+     * Intentionally tenant-scoped only — tenants must not mutate global adapters.
+     * Used by update(), toggle(), and delete() in AdapterService.
+     */
     public Uni<AdapterEntity> findById(UUID tenantId, UUID adapterId) {
         return AdapterEntity.findByTenantAndId(tenantId, adapterId);
     }
@@ -79,8 +105,9 @@ public class AdapterRepository {
      * Uses direct public field assignment — AdapterEntity extends
      * PanacheEntityBase which uses public fields, not getters/setters.
      *
-     * Fields not in AdapterEntity (isDefault, creditTier) are omitted —
-     * AdapterEntity has no such columns.
+     * NOTE: This adapter's UUID is derived from tenantId and will NOT match
+     * the real adapter row in the DB. Once a global (tenant_id IS NULL) adapter
+     * is seeded this method is never reached.
      */
     private AdapterEntity buildDefaultAdapter(UUID tenantId) {
         AdapterEntity entity = new AdapterEntity();

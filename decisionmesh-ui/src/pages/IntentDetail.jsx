@@ -262,17 +262,22 @@ function AdapterCard({ events, adapters, executions }) {
   const adapterId   = eventAdapterId ?? execRecord?.adapterId;
   const adapterName = execRecord?.adapterName;
 
-  // Look up full adapter from the adapters list
-  const adapter = adapters?.find(a => a.id === adapterId);
+  // Look up full adapter from the adapters list.
+  // Falls back to the only available adapter when the stored adapterId is stale
+  // (e.g. intent ran before the real DB adapter was registered — execution engine
+  // used a synthetic in-memory adapter whose UUID doesn't match any real row).
+  // Only applies when exactly one adapter exists to avoid ambiguous matching.
+  const adapter = adapters?.find(a => a.id === adapterId)
+               ?? (adapters?.length === 1 ? adapters[0] : null);
 
   const allAttempts = (events ?? []).filter(e => e.attemptNumber != null);
 
   // Derive display info: prefer DB adapter record, fall back to execution record fields
-  const displayName     = adapter?.name     ?? adapterName ?? null;
-  const displayProvider = adapter?.provider ?? null;
-  const displayModel    = adapter?.modelId  ?? adapter?.modelName ?? adapter?.model_id ?? null;
+  const displayName     = adapter?.name     ?? adapterName                                    ?? null;
+  const displayProvider = adapter?.provider ?? execRecord?.provider ?? execRecord?.adapterProvider ?? null;
+  const displayModel    = adapter?.modelId  ?? adapter?.modelName   ?? adapter?.model_id ?? adapter?.model ?? null;
   const displayRegion   = adapter?.region   ?? null;
-  const displayActive   = adapter?.isActive ?? adapter?.is_active ?? true;
+  const displayActive   = adapter?.isActive ?? adapter?.is_active   ?? true;
 
   const hasAnyInfo = !!(displayName || adapterId || adapterName || execRecord);
 
