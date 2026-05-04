@@ -36,7 +36,7 @@ import java.util.UUID;
  * Entity: UserFeedback (com.decisionmesh.bootstrap.entity) — extracted to
  * its own file for correct Quarkus build-time Hibernate scanning.
  */
-@Path("/api/feedback")
+@Path("/api/admin/feedback")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated

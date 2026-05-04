@@ -144,7 +144,7 @@ export default function FeedbackWidget({ keycloak }) {
     setError(null);
 
     try {
-      await request(keycloak, '/api/feedback', {
+      await request(keycloak, '/admin/feedback', {
         method: 'POST',
         body: JSON.stringify({
           rating,
