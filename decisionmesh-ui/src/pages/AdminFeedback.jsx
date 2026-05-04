@@ -91,7 +91,7 @@ export default function AdminFeedback({ keycloak }) {
       if (category !== 'all') params.set('category', category);
       if (minRating > 1)      params.set('minRating', minRating);
 
-      const data = await request(keycloak, `/feedback?${params}`);
+      const data = await request(keycloak, `/admin/feedback?${params}`);
       setFeedback(data ?? []);
       setPage(0);
     } catch (e) {
