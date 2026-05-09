@@ -76,6 +76,7 @@ public class VaultConfigSource implements ConfigSource {
         loadDirect(client, "decisionmesh/email");
         loadDirect(client, "decisionmesh/redis");
         loadDirect(client, "decisionmesh/kafka");
+        loadDirect(client, "decisionmesh/zitadel");
 
         // Copy into static map so adapters can access via getSecret()
         LOADED.putAll(properties);
