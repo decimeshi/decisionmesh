@@ -1,16 +1,125 @@
+# ============================================================
+# docker-compose.yml — base layer
+# Usage:
+#   Local : docker compose -f docker-compose.yml -f docker-compose_local.yml up -d
+#   Prod  : docker compose -f docker-compose.yml -f docker-compose_prod.yml   up -d
+#   See docker-compose_staging.yml for standalone staging
+# ============================================================
+
+name: decisionmesh
+
+networks:
+  internal:
+    name: decisionmesh_internal
+    driver: bridge
+
 services:
 
+  # ----------------------------------------------------------
+  # PostgreSQL
+  # ----------------------------------------------------------
   postgres:
     image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-decisionmesh}
+      POSTGRES_USER:     ${DB_USER:-decisionmesh}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-decisionmesh} -d ${DB_NAME:-decisionmesh}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - internal
 
+  # ----------------------------------------------------------
+  # Redis  (password enforced in all environments)
+  # ----------------------------------------------------------
   redis:
     image: redis:7-alpine
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-changeme}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
 
+  # ----------------------------------------------------------
+  # Kafka — KRaft mode (no ZooKeeper)
+  # KAFKA_CLUSTER_ID must be a stable base64-URL UUID.
+  # Generate once with:  docker run --rm apache/kafka:3.7.0 \
+  #   /opt/kafka/bin/kafka-storage.sh random-uuid
+  # Then pin it in .env so Kafka data survives container recreation.
+  # ----------------------------------------------------------
   kafka:
     image: apache/kafka:3.7.0
+    environment:
+      KAFKA_NODE_ID:                                  1
+      KAFKA_PROCESS_ROLES:                            broker,controller
+      KAFKA_LISTENERS:                                PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS:                     PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES:                CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:           PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS:                 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR:         1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR:            1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE:                "true"
+      KAFKA_CLUSTER_ID:                               ${KAFKA_CLUSTER_ID:?KAFKA_CLUSTER_ID must be set in .env}
+      KAFKA_HEAP_OPTS:                                "-Xmx512m -Xms256m"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - internal
 
+  # ----------------------------------------------------------
+  # OpenBao  (Vault-compatible secrets engine)
+  # Dev mode is configured per-environment overlay.
+  # Prod/staging use server mode with config/openbao.hcl.
+  # ----------------------------------------------------------
   openbao:
-    image: openbao/openbao:latest
+    image: openbao/openbao:2
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      # Exit 0 = unsealed, exit 2 = sealed — both mean "running".
+      # Exit 1 = connection refused — means not ready yet.
+      test: >
+        ["CMD-SHELL",
+         "bao status -address=http://127.0.0.1:8200 2>/dev/null ||
+          bao status -address=http://127.0.0.1:8200 2>&1 | grep -q Sealed"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - internal
 
+  # ----------------------------------------------------------
+  # Ollama  (local LLM / embedding)
+  # CPU-only on Hetzner — consider a hosted embedding API in prod
+  # if inference latency is unacceptable.
+  # ----------------------------------------------------------
   ollama:
     image: ollama/ollama:latest
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - internal

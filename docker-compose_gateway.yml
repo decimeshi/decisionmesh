@@ -1,0 +1,52 @@
+# ============================================================
+# docker-compose_gateway.yml — shared reverse proxy
+#
+# Use this ONLY when prod and staging share ONE Hetzner box.
+# Caddy joins both internal networks so it can route to both
+# API containers.
+#
+# Start order:
+#   1. docker compose -f docker-compose.yml \
+#                     -f docker-compose_prod.yml up -d
+#      (comment out the caddy service in docker-compose_prod.yml first)
+#
+#   2. docker compose -f docker-compose_staging.yml up -d
+#      (comment out the caddy service in docker-compose_staging.yml first)
+#
+#   3. docker compose -f docker-compose_gateway.yml up -d
+#
+# Both stacks must be started before the gateway so their
+# networks exist when Caddy tries to join them.
+# ============================================================
+
+name: decisionmesh-gateway
+
+networks:
+  prod_net:
+    external: true
+    name: decisionmesh_internal
+  staging_net:
+    external: true
+    name: decisionmesh-staging_internal
+
+services:
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dm-caddy-gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - prod_net
+      - staging_net
+
+volumes:
+  caddy-data:
+  caddy-config:

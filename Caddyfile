@@ -1,0 +1,14 @@
+# Caddyfile — production (decimeshi.com)
+# Used by the prod caddy service OR the gateway caddy service.
+# Caddy auto-provisions TLS via Let's Encrypt.
+# Port 80 → 443 redirect is automatic.
+
+decimeshi.com {
+    reverse_proxy dm-api:8080
+
+    log {
+        output stderr
+        format json
+        level  WARN
+    }
+}
