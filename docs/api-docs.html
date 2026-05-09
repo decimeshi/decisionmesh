@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DecisionMesh API Reference</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #111318;
+      --border:    #1e2128;
+      --accent:    #00d4ff;
+      --accent2:   #7c5cfc;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --header-h:  64px;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: rgba(10,12,16,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      z-index: 1000;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: #000;
+    }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .logo-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--accent);
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      background: var(--surface);
+      color: var(--text);
+      border-color: #2e3340;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0,212,255,0.25);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: calc(var(--header-h) + 60px) 32px 48px;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.1s forwards;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.2s forwards;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 560px;
+      margin: 0 auto 32px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.3s forwards;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.4s forwards;
+    }
+
+    /* ── Stats bar ── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 600px;
+      margin: 48px auto;
+      opacity: 0;
+      animation: fadeUp 0.6s ease 0.5s forwards;
+    }
+
+    .stat {
+      flex: 1;
+      padding: 20px 24px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stat:last-child { border-right: none; }
+
+    .stat-num {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ── Swagger UI wrapper ── */
+    .swagger-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .swagger-wrap-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    /* ── Swagger UI overrides ── */
+    .swagger-ui {
+      font-family: 'Syne', sans-serif !important;
+    }
+
+    .swagger-ui .topbar { display: none !important; }
+    .swagger-ui .info { display: none !important; }
+
+    .swagger-ui .scheme-container {
+      background: var(--surface) !important;
+      border-bottom: 1px solid var(--border) !important;
+      padding: 16px 24px !important;
+      box-shadow: none !important;
+    }
+
+    .swagger-ui .opblock-tag {
+      background: transparent !important;
+      border-bottom: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      font-family: 'Syne', sans-serif !important;
+      font-weight: 700 !important;
+      font-size: 15px !important;
+      padding: 16px 20px !important;
+    }
+
+    .swagger-ui .opblock-tag:hover {
+      background: rgba(255,255,255,0.02) !important;
+    }
+
+    .swagger-ui .opblock-tag small {
+      color: var(--muted) !important;
+      font-family: 'DM Mono', monospace !important;
+      font-size: 11px !important;
+    }
+
+    .swagger-ui .opblock {
+      border: none !important;
+      border-bottom: 1px solid var(--border) !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .swagger-ui .opblock:hover { background: rgba(255,255,255,0.01) !important; }
+
+    .swagger-ui .opblock .opblock-summary {
+      border: none !important;
+      padding: 14px 20px !important;
+    }
+
+    .swagger-ui .opblock .opblock-summary-method {
+      font-family: 'DM Mono', monospace !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
+      border-radius: 6px !important;
+      min-width: 64px !important;
+      padding: 4px 10px !important;
+    }
+
+    .swagger-ui .opblock.opblock-get    { background: rgba(0,212,255,0.03) !important; }
+    .swagger-ui .opblock.opblock-post   { background: rgba(0,200,100,0.03) !important; }
+    .swagger-ui .opblock.opblock-put    { background: rgba(255,170,0,0.03) !important; }
+    .swagger-ui .opblock.opblock-patch  { background: rgba(100,150,255,0.03) !important; }
+    .swagger-ui .opblock.opblock-delete { background: rgba(255,80,80,0.03) !important; }
+
+    .swagger-ui .opblock.opblock-get    .opblock-summary-method { background: rgba(0,212,255,0.15) !important; color: var(--accent) !important; }
+    .swagger-ui .opblock.opblock-post   .opblock-summary-method { background: rgba(0,200,100,0.15) !important; color: #00c864 !important; }
+    .swagger-ui .opblock.opblock-put    .opblock-summary-method { background: rgba(255,170,0,0.15) !important; color: #ffaa00 !important; }
+    .swagger-ui .opblock.opblock-patch  .opblock-summary-method { background: rgba(100,150,255,0.15) !important; color: #6496ff !important; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: rgba(255,80,80,0.15) !important; color: #ff5050 !important; }
+
+    .swagger-ui .opblock-summary-path,
+    .swagger-ui .opblock-summary-description {
+      font-family: 'DM Mono', monospace !important;
+      color: var(--text) !important;
+    }
+
+    .swagger-ui .opblock-summary-description {
+      font-family: 'Syne', sans-serif !important;
+      color: var(--muted) !important;
+      font-size: 13px !important;
+    }
+
+    .swagger-ui .opblock-body,
+    .swagger-ui .opblock-section,
+    .swagger-ui table,
+    .swagger-ui .responses-wrapper,
+    .swagger-ui .parameters-container {
+      background: transparent !important;
+    }
+
+    .swagger-ui .parameter__name,
+    .swagger-ui .parameter__type,
+    .swagger-ui .parameter__in,
+    .swagger-ui table thead tr th,
+    .swagger-ui table tbody tr td {
+      color: var(--text) !important;
+    }
+
+    .swagger-ui .tab li,
+    .swagger-ui .opblock-section-header h4 {
+      color: var(--text) !important;
+      font-family: 'Syne', sans-serif !important;
+    }
+
+    .swagger-ui textarea,
+    .swagger-ui input[type=text],
+    .swagger-ui input[type=email],
+    .swagger-ui input[type=file],
+    .swagger-ui input[type=password],
+    .swagger-ui select {
+      background: var(--bg) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+      font-family: 'DM Mono', monospace !important;
+      border-radius: 6px !important;
+    }
+
+    .swagger-ui .btn {
+      font-family: 'Syne', sans-serif !important;
+      font-weight: 600 !important;
+      border-radius: 6px !important;
+    }
+
+    .swagger-ui .btn.execute {
+      background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
+      border: none !important;
+      color: #000 !important;
+      font-weight: 700 !important;
+    }
+
+    .swagger-ui .btn.authorize {
+      border-color: var(--accent) !important;
+      color: var(--accent) !important;
+    }
+
+    .swagger-ui .response-col_status { color: var(--accent) !important; }
+
+    .swagger-ui .highlight-code pre,
+    .swagger-ui .model-box,
+    .swagger-ui section.models .model-container {
+      background: var(--bg) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 8px !important;
+    }
+
+    .swagger-ui .microlight,
+    .swagger-ui .model,
+    .swagger-ui .model span {
+      color: var(--text) !important;
+      font-family: 'DM Mono', monospace !important;
+      font-size: 13px !important;
+    }
+
+    .swagger-ui section.models { border: 1px solid var(--border) !important; }
+    .swagger-ui section.models h4 { color: var(--text) !important; }
+
+    .swagger-ui .markdown p,
+    .swagger-ui .markdown li,
+    .swagger-ui .markdown code {
+      color: var(--muted) !important;
+      font-size: 13px !important;
+    }
+
+    .swagger-ui .markdown code {
+      background: var(--bg) !important;
+      font-family: 'DM Mono', monospace !important;
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-copy {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 0 16px; }
+      .hero { padding: calc(var(--header-h) + 40px) 16px 32px; }
+      .stats { flex-direction: column; }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:last-child { border-bottom: none; }
+      .swagger-wrap { padding: 0 12px 60px; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <a class="logo" href="https://decimeshi.com">
+      <div class="logo-mark">DM</div>
+      <span class="logo-text">DecisionMesh</span>
+      <span class="logo-badge">API v1.0</span>
+    </a>
+    <div class="header-actions">
+      <a class="btn btn-ghost" href="/openapi.yaml" download="decisionmesh-openapi.yaml">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Download Spec
+      </a>
+      <a class="btn btn-primary" href="https://decimeshi.com" target="_blank">
+        Get Started →
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <p class="hero-eyebrow">Developer Reference</p>
+    <h1>AI Control Plane <span>API</span></h1>
+    <p class="hero-sub">
+      Orchestrate AI intents, manage governance policies, track costs,
+      and integrate DecisionMesh into your workflow with our REST API.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#swagger-ui">
+        Explore Endpoints ↓
+      </a>
+      <a class="btn btn-ghost" href="/openapi.yaml" download="decisionmesh-openapi.yaml">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        openapi.yaml
+      </a>
+      <a class="btn btn-ghost" href="https://editor.swagger.io?url=https://decimeshi.com/openapi.yaml" target="_blank">
+        Open in Swagger Editor ↗
+      </a>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num">40+</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">264</div>
+        <div class="stat-label">Intent Templates</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">REST</div>
+        <div class="stat-label">Protocol</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">JWT</div>
+        <div class="stat-label">Auth</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Swagger UI ── -->
+  <div class="swagger-wrap" id="swagger-ui">
+    <div class="swagger-wrap-inner">
+      <div id="swagger-ui-root"></div>
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <span class="footer-copy">© 2026 DecisionMesh. All rights reserved.</span>
+    <div class="footer-links">
+      <a href="https://decimeshi.com">Home</a>
+      <a href="/openapi.yaml" download>Download Spec</a>
+      <a href="mailto:support@decimeshi.com">Support</a>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.17.14/swagger-ui-standalone-preset.min.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/openapi.yaml',
+        dom_id: '#swagger-ui-root',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: 'StandaloneLayout',
+        deepLinking: true,
+        displayRequestDuration: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+        docExpansion: 'list',
+        filter: true,
+        tryItOutEnabled: false,
+        syntaxHighlight: {
+          activate: true,
+          theme: 'monokai'
+        }
+      });
+    };
+  </script>
+</body>
+</html>

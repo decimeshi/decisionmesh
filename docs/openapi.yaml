@@ -1,0 +1,2591 @@
+openapi: 3.0.3
+info:
+  title: DecisionMesh AI Control Plane API
+  description: |
+    # DecisionMesh AI Control Plane API
+
+    The DecisionMesh AI Control Plane is a multi-tenant platform for orchestrating AI intents,
+    managing governance policies, tracking execution costs, and handling billing — all secured
+    behind Zitadel OIDC authentication.
+
+    ---
+
+    ## Getting Started
+
+    ### 1. Obtain an Access Token
+    Use the Zitadel OAuth2 Authorization Code flow:
+
+    ```
+    GET https://decisionmesh-1pgrry.eu1.zitadel.cloud/oauth/v2/authorize
+      ?client_id=368134611768783581
+      &redirect_uri=https://your-app.com/auth/callback
+      &response_type=code
+      &scope=openid profile email
+    ```
+
+    Exchange the code for a token:
+    ```
+    POST https://decisionmesh-1pgrry.eu1.zitadel.cloud/oauth/v2/token
+    Content-Type: application/x-www-form-urlencoded
+
+    grant_type=authorization_code
+    &code=<code>
+    &redirect_uri=https://your-app.com/auth/callback
+    &client_id=368134611768783581
+    ```
+
+    ### 2. Include Token in Requests
+    ```
+    Authorization: Bearer <access_token>
+    ```
+
+    ### 3. Complete Onboarding (first-time users)
+    New users must complete onboarding before accessing business endpoints:
+
+    ```
+    Step 1: POST /api/onboard/ensure       ← called after every login
+    Step 2: POST /api/onboard/setup-tenant ← called once to create workspace
+    Step 3: Refresh token if requiresTokenRefresh=true
+    ```
+
+    ---
+
+    ## Roles & Permissions
+
+    | Role | Description |
+    |------|-------------|
+    | `sys_admin` | Platform administrator — unrestricted access to all endpoints and all tenants |
+    | `tenant_admin` | Tenant administrator — full access within their tenant |
+    | `tenant_user` | Standard user — can submit intents, manage policies, view analytics |
+
+    Roles are embedded in the JWT under:
+    ```json
+    "urn:zitadel:iam:org:project:roles": {
+      "tenant_user": { "orgId": "domain" }
+    }
+    ```
+
+    ---
+
+    ## Tenant Isolation
+    All data is scoped to the authenticated user's tenant. The `tenantId` is resolved from:
+    1. The `TenantContext` (DB lookup by Zitadel `sub`) — primary source
+    2. The `tenantId` JWT claim (set by Zitadel Action after onboarding) — fallback
+
+    Cross-tenant data access is not possible through these APIs.
+
+    ---
+
+    ## Error Format
+    All errors return a JSON body:
+    ```json
+    { "message": "Human-readable error description" }
+    ```
+
+    | Status | Meaning |
+    |--------|---------|
+    | 400 | Bad request — missing or invalid fields |
+    | 401 | Missing or expired Bearer token |
+    | 403 | Valid token but insufficient role or onboarding incomplete |
+    | 404 | Resource not found |
+    | 409 | Conflict — resource already exists |
+    | 500 | Internal server error |
+
+  version: 1.0.0
+  contact:
+    name: DecisionMesh Support
+    url: https://decimeshi.com
+
+servers:
+  - url: https://api.decimeshi.com
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Onboarding
+    description: |
+      User provisioning and tenant workspace setup.
+      Every new user must complete the onboarding flow before accessing other APIs.
+  - name: Intents
+    description: |
+      Submit and manage AI intents. An intent represents a unit of AI work
+      (e.g. fraud detection, credit scoring) that is orchestrated through the control plane.
+  - name: Intent Library
+    description: |
+      Browse pre-built intent templates for the FINTECH vertical.
+      Templates can be used as starting points for custom intents.
+  - name: Policies
+    description: |
+      Define governance rules that are evaluated against every intent execution.
+      Policies control which AI adapters can be used, cost limits, risk thresholds, etc.
+  - name: Analytics
+    description: Cost and drift analytics dashboards for tenant workloads.
+  - name: Executions
+    description: Query execution records — each intent execution produces one or more records.
+  - name: API Keys
+    description: |
+      Manage programmatic API keys for server-to-server integration.
+      Keys are shown only once at creation — store them securely.
+  - name: Audit
+    description: Immutable audit log of all significant actions within a tenant.
+  - name: Members
+    description: Manage organization members and their roles.
+  - name: Invitations
+    description: Invite team members to join a tenant organization.
+  - name: Organization
+    description: Organization profile, branding, and project management.
+  - name: Credits
+    description: View credit balance and usage ledger.
+  - name: Feedback
+    description: Submit product feedback. Admins can view all feedback.
+  - name: Health
+    description: Infrastructure health checks — no authentication required.
+
+paths:
+
+  # ═══════════════════════════════════════════════════════════════
+  # ONBOARDING
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/onboard/me:
+    get:
+      tags: [Onboarding]
+      summary: Get current user onboarding status
+      description: |
+        ## Purpose
+        Called on every app load immediately after authentication to check whether
+        the user has completed onboarding and to upsert the user record in the database.
+
+        ## Behaviour
+        - If the user exists in the DB → returns their profile and `tenantId`
+        - If the user does not exist → creates a new user record (fetching profile from Zitadel if available)
+        - Operation is fully **idempotent** — safe to call multiple times
+
+        ## Frontend Usage
+        ```javascript
+        const res = await fetch('/api/onboard/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const { onboarded, tenantId } = await res.json();
+        if (!onboarded) navigate('/onboarding');
+        ```
+
+        ## When `onboarded` is `false`
+        The user has not yet called `POST /api/onboard/setup-tenant`.
+        Redirect them to the onboarding screen.
+      responses:
+        '200':
+          description: User profile and onboarding status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardMeResponse'
+              example:
+                externalId: "370876452234626240"
+                email: "alice@example.com"
+                name: "Alice Smith"
+                tenantId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                onboarded: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/onboard/ensure:
+    post:
+      tags: [Onboarding]
+      summary: Ensure user exists in DB after every login
+      description: |
+        ## Purpose
+        A safety net called once after every OIDC callback (login). Guarantees the
+        user row exists in the database even if the Zitadel post-registration webhook
+        was not delivered (e.g. network errors, local development without a tunnel).
+
+        ## Why supply email in the body?
+        Zitadel does not include `email` in the access token by default — only in the
+        ID token and userinfo endpoint. Since Quarkus OIDC validates the access token,
+        `jwt.getClaim("email")` returns null. The frontend reads the email from
+        `auth.user.profile` (userinfo) and passes it in the request body so the backend
+        always has it for DB inserts.
+
+        ## Response Fields
+        | Field | Description |
+        |-------|-------------|
+        | `userId` | Internal UUID for the user |
+        | `tenantId` | Tenant UUID, or `null` if setup-tenant not yet called |
+        | `onboarded` | `false` → redirect to onboarding; `true` → proceed to dashboard |
+        | `email` | Stored email (may be blank if not yet fetched from Zitadel) |
+
+        ## Frontend Usage
+        ```javascript
+        const res = await fetch('/api/onboard/ensure', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: auth.user.profile.email,
+            name: auth.user.profile.name
+          })
+        });
+        const { onboarded } = await res.json();
+        ```
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnsureRequest'
+            example:
+              email: "alice@example.com"
+              name: "Alice Smith"
+      responses:
+        '200':
+          description: User ensured — check `onboarded` to determine next step
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnsureResponse'
+              example:
+                userId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                tenantId: null
+                onboarded: false
+                email: "alice@example.com"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/onboard/setup-tenant:
+    post:
+      tags: [Onboarding]
+      summary: Create tenant workspace (called once per user)
+      description: |
+        ## Purpose
+        Called once — after the user answers the onboarding question
+        (Individual vs Organisation). This endpoint:
+
+        1. Creates a **Tenant** record
+        2. Creates a default **Organization** and **Project**
+        3. Assigns the `tenant_user` role in Zitadel
+        4. Grants a registration credit gift to the new tenant
+
+        ## Token Refresh Requirement
+        After setup, the user's existing JWT does not yet contain the `tenant_user` role
+        claim (it was just assigned). If `requiresTokenRefresh=true` in the response,
+        the frontend **must** call `auth.signinSilent()` or equivalent before making
+        any subsequent API calls.
+
+        ## Account Types
+        | Type | Description |
+        |------|-------------|
+        | `INDIVIDUAL` | Personal workspace — no company details required |
+        | `ORGANIZATION` | Company workspace — `companyName` is required |
+
+        ## Example: Individual
+        ```json
+        { "accountType": "INDIVIDUAL" }
+        ```
+
+        ## Example: Organization
+        ```json
+        {
+          "accountType": "ORGANIZATION",
+          "companyName": "Acme Corp",
+          "companySize": "10-50"
+        }
+        ```
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupTenantRequest'
+      responses:
+        '201':
+          description: Tenant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupTenantResponse'
+              example:
+                message: "Tenant setup complete"
+                tenantId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                accountType: "INDIVIDUAL"
+                requiresTokenRefresh: true
+        '400':
+          description: |
+            Invalid request. Common causes:
+            - `accountType` is missing or not `INDIVIDUAL`/`ORGANIZATION`
+            - `companyName` is missing when `accountType` is `ORGANIZATION`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "companyName is required for ORGANIZATION"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Tenant already exists for this user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Tenant already exists"
+
+  /api/onboard/repair-attributes:
+    post:
+      tags: [Onboarding]
+      summary: Repair missing Zitadel role or metadata
+      description: |
+        ## Purpose
+        Recovers users who are stuck in a broken state — tenant was created in the DB
+        but the Zitadel role (`tenant_user`) was never assigned, or the metadata
+        (`tenantId`, `accountType`) was never written.
+
+        ## When to call
+        Call this endpoint if a user can log in but receives 403 errors on all other
+        endpoints. After a successful repair, the frontend must refresh the token
+        to pick up the newly assigned role claim.
+
+        ## What it does
+        1. Looks up the user and their tenant in the DB
+        2. Re-writes `tenantId` and `accountType` metadata to Zitadel
+        3. Re-assigns the `tenant_user` role grant in Zitadel
+
+        After calling this, the frontend must call `auth.signinSilent()` to get
+        a token that contains the newly assigned role.
+      responses:
+        '200':
+          description: Repair successful — token refresh required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  sub:
+                    type: string
+              example:
+                message: "Attributes repaired successfully"
+                sub: "370876452234626240"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Repair failed — check that tenant exists in DB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "User not found: 370876452234626240"
+
+  # ═══════════════════════════════════════════════════════════════
+  # INTENTS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/intents:
+    get:
+      tags: [Intents]
+      summary: List intents for the authenticated tenant
+      description: |
+        ## Purpose
+        Returns a paginated, sortable list of AI intents submitted by the tenant.
+
+        ## Filtering
+        Use the `phase` query parameter to filter by execution state:
+        | Phase | Description |
+        |-------|-------------|
+        | `SUBMITTED` | Intent received, not yet processed |
+        | `EXECUTING` | Currently being processed by an AI adapter |
+        | `COMPLETED` | Processing finished successfully |
+        | `FAILED` | Processing failed — check events for details |
+
+        ## Sorting
+        The `sort` parameter accepts `field,direction` format:
+        - `createdAt,desc` (default) — newest first
+        - `createdAt,asc` — oldest first
+
+        ## Pagination
+        Results are zero-indexed. Use `page=0&size=20` for the first page.
+      parameters:
+        - name: page
+          in: query
+          description: Zero-based page number
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          description: Records per page (max 100)
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: sort
+          in: query
+          description: Sort field and direction (`field,asc` or `field,desc`)
+          schema:
+            type: string
+            default: createdAt,desc
+            example: createdAt,desc
+        - name: phase
+          in: query
+          description: Filter by execution phase
+          schema:
+            type: string
+            enum: [SUBMITTED, EXECUTING, COMPLETED, FAILED]
+      responses:
+        '200':
+          description: Paginated intent list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentPageResponse'
+              example:
+                content:
+                  - intentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    intentType: "FRAUD_DETECTION"
+                    phase: "COMPLETED"
+                    createdAt: "2026-05-09T10:00:00Z"
+                totalElements: 42
+                totalPages: 3
+                number: 0
+                size: 20
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    post:
+      tags: [Intents]
+      summary: Submit a new AI intent
+      description: |
+        ## Purpose
+        Submits an AI intent for processing through the control plane orchestrator.
+        The orchestrator selects the appropriate AI adapter based on the intent type
+        and applies all active governance policies before execution.
+
+        ## Idempotency
+        Every request **must** include an `Idempotency-Key` header (a UUID).
+        If the same key is submitted twice, the second call returns the result of the
+        first without re-executing. Generate a fresh UUID for each new intent.
+
+        ```javascript
+        const res = await fetch('/api/intents', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': crypto.randomUUID()
+          },
+          body: JSON.stringify({
+            intentType: 'FRAUD_DETECTION',
+            payload: { transactionId: 'txn_123', amount: 5000 }
+          })
+        });
+        const intentId = await res.json();
+        ```
+
+        ## Response
+        Returns the `intentId` (UUID string). Use this ID to poll
+        `GET /api/intents/{intentId}` for status updates.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            A unique UUID per intent submission. Required to prevent duplicate processing.
+            Generate with `crypto.randomUUID()` or equivalent.
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntentRequest'
+            example:
+              intentType: "FRAUD_DETECTION"
+              payload:
+                transactionId: "txn_abc123"
+                amount: 5000
+                currency: "USD"
+                merchantId: "merch_456"
+      responses:
+        '200':
+          description: Intent accepted — returns the intent ID
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+              example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        '400':
+          description: Missing intent body or Idempotency-Key header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Missing Idempotency-Key header"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intents/{intentId}:
+    get:
+      tags: [Intents]
+      summary: Get intent details by ID
+      description: |
+        Returns the full detail of a single intent including its current phase,
+        payload, and metadata. Poll this endpoint to track execution progress.
+
+        ## Phase Lifecycle
+        ```
+        SUBMITTED → EXECUTING → COMPLETED
+                              ↘ FAILED
+        ```
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '200':
+          description: Intent detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentDetail'
+              example:
+                intentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                intentType: "FRAUD_DETECTION"
+                phase: "COMPLETED"
+                tenantId: "tenant-uuid"
+                createdAt: "2026-05-09T10:00:00Z"
+                updatedAt: "2026-05-09T10:00:05Z"
+        '404':
+          description: Intent not found or does not belong to this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Intent not found: 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    delete:
+      tags: [Intents]
+      summary: Delete an intent
+      description: |
+        Permanently deletes an intent and all associated records.
+        Only intents belonging to the authenticated tenant can be deleted.
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '204':
+          description: Intent deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intents/{intentId}/events:
+    get:
+      tags: [Intents]
+      summary: Get event stream for an intent
+      description: |
+        Returns all events emitted during intent processing. Events form an audit trail
+        of exactly what happened — which adapter was selected, when execution started,
+        policy evaluation results, and the final outcome.
+
+        Use this endpoint to display a live activity feed or debug failed intents.
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '200':
+          description: Event list in chronological order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntentEvent'
+              example:
+                - eventId: "evt-001"
+                  intentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  eventType: "INTENT_RECEIVED"
+                  createdAt: "2026-05-09T10:00:00Z"
+                - eventId: "evt-002"
+                  intentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  eventType: "ADAPTER_SELECTED"
+                  payload:
+                    adapter: "anthropic-claude"
+                  createdAt: "2026-05-09T10:00:01Z"
+                - eventId: "evt-003"
+                  intentId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  eventType: "EXECUTION_COMPLETED"
+                  createdAt: "2026-05-09T10:00:05Z"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intents/{intentId}/executions:
+    get:
+      tags: [Intents]
+      summary: Get execution records for an intent
+      description: |
+        Returns all execution records for the given intent. Each record captures:
+        - Which AI adapter was used
+        - Token usage and cost
+        - Latency
+        - The raw adapter response
+
+        Use this to power the **Decision Output** card in the UI.
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '200':
+          description: Execution records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionRecord'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intents/{intentId}/policy-evaluations:
+    get:
+      tags: [Intents]
+      summary: Get policy evaluation results for an intent
+      description: |
+        Returns the results of all governance policy evaluations that ran against
+        this intent. Each result shows whether the policy passed or failed and why.
+
+        Use this to power the **Policy Outcome** card in the UI.
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '200':
+          description: Policy evaluation results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PolicyEvaluation'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # INTENT LIBRARY
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/intent-library/{vertical}:
+    get:
+      tags: [Intent Library]
+      summary: Get all pre-built intents for a vertical
+      description: |
+        Returns all pre-built intent templates for the given industry vertical.
+        Currently supported: `fintech` (264 intents across categories like
+        Payments, Fraud Detection, Credit Scoring, Compliance, etc.)
+
+        Templates serve as starting points — copy the structure and customize
+        the payload for your specific use case.
+      parameters:
+        - name: vertical
+          in: path
+          required: true
+          description: Industry vertical (case-insensitive)
+          schema:
+            type: string
+            enum: [fintech]
+          example: fintech
+      responses:
+        '200':
+          description: Full intent library for the vertical
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntentLibraryItem'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intent-library/{vertical}/meta/categories:
+    get:
+      tags: [Intent Library]
+      summary: Get category summary for a vertical
+      description: |
+        Returns a list of categories with intent counts. Use this to populate
+        the category filter sidebar in the Intent Library UI.
+
+        Example response for FINTECH:
+        ```json
+        [
+          { "category": "FRAUD_DETECTION", "count": 45 },
+          { "category": "PAYMENTS",        "count": 38 },
+          { "category": "CREDIT_SCORING",  "count": 32 }
+        ]
+        ```
+      parameters:
+        - name: vertical
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fintech
+      responses:
+        '200':
+          description: Category list with counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategorySummary'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intent-library/{vertical}/by-category/{category}:
+    get:
+      tags: [Intent Library]
+      summary: Get intents filtered by category
+      description: |
+        Returns all intent templates for a specific category within a vertical.
+        Useful for category drill-down in the Intent Library UI.
+      parameters:
+        - name: vertical
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fintech
+        - name: category
+          in: path
+          required: true
+          description: Category name (uppercase)
+          schema:
+            type: string
+          example: PAYMENTS
+      responses:
+        '200':
+          description: Intents for the specified category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntentLibraryItem'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intent-library/{vertical}/search:
+    get:
+      tags: [Intent Library]
+      summary: Search the intent library
+      description: |
+        Full-text and filtered search across the intent library.
+        Supports searching by keyword, filtering by tag, and filtering by risk level.
+
+        ## Examples
+        - Search for fraud intents: `?q=fraud`
+        - Filter by RBI compliance tag: `?tag=rbi`
+        - High-risk intents only: `?risk=HIGH`
+        - Combined: `?q=fraud&tag=rbi&risk=HIGH`
+      parameters:
+        - name: vertical
+          in: path
+          required: true
+          schema:
+            type: string
+          example: fintech
+        - name: q
+          in: query
+          description: Full-text search query
+          schema:
+            type: string
+          example: fraud detection
+        - name: tag
+          in: query
+          description: Filter by compliance or domain tag
+          schema:
+            type: string
+          example: rbi
+        - name: risk
+          in: query
+          description: Filter by risk level
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH]
+      responses:
+        '200':
+          description: Matching intent templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntentLibraryItem'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/intent-library/intent/{id}:
+    get:
+      tags: [Intent Library]
+      summary: Get a single intent library item by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Intent template detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentLibraryItem'
+        '404':
+          description: Intent not found in library
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "Intent not found: 3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # POLICIES
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/policies:
+    get:
+      tags: [Policies]
+      summary: List governance policies for tenant
+      description: |
+        Returns all active governance policies for the authenticated tenant.
+        Policies are evaluated against every intent execution before the AI adapter
+        is invoked. Common policy types include:
+        - Cost caps (block executions above a cost threshold)
+        - Adapter allowlists (restrict which AI providers can be used)
+        - Risk thresholds (block high-risk intent types)
+        - Rate limits (max executions per hour/day)
+      responses:
+        '200':
+          description: Policy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PolicyResponse'
+              example:
+                - policyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  name: "Max cost per execution"
+                  description: "Block executions costing more than $0.10"
+                  isActive: true
+                  createdAt: "2026-05-01T00:00:00Z"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    post:
+      tags: [Policies]
+      summary: Create a governance policy
+      description: |
+        Creates a new governance policy. The policy is immediately active and
+        will be evaluated against all subsequent intent executions.
+
+        ## Audit
+        Policy creation is automatically logged to the audit trail with the
+        `POLICY_CREATED` action.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePolicyRequest'
+            example:
+              name: "Max cost per execution"
+              description: "Block executions costing more than $0.10"
+              rules:
+                - type: COST_CAP
+                  threshold: 0.10
+      responses:
+        '201':
+          description: Policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '400':
+          description: Policy name is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/policies/{id}:
+    put:
+      tags: [Policies]
+      summary: Update a policy
+      description: |
+        Replaces a policy's name, description, and rules.
+        The policy ID and tenant scope are preserved.
+
+        ## Audit
+        Policy updates are automatically logged with the `POLICY_UPDATED` action.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePolicyRequest'
+      responses:
+        '200':
+          description: Policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    delete:
+      tags: [Policies]
+      summary: Delete a policy
+      description: |
+        Permanently deletes a governance policy. Existing execution records that
+        reference this policy are not affected.
+
+        ## Audit
+        Policy deletions are automatically logged with the `POLICY_DELETED` action.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Policy deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # ANALYTICS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/analytics/cost:
+    get:
+      tags: [Analytics]
+      summary: Get cost analytics for the tenant
+      description: |
+        Returns aggregated cost data for the authenticated tenant's AI workload.
+
+        ## Response Fields
+        | Field | Description |
+        |-------|-------------|
+        | `totalCostUsd` | Total spend across all executions |
+        | `avgCostPerIntent` | Average cost per intent (weighted) |
+        | `costOverTime` | Daily cost breakdown for charting |
+        | `costByAdapter` | Cost breakdown by AI provider |
+
+        ## Usage
+        Powers the **Cost Analytics** dashboard card (`CostAnalytics.jsx`).
+
+        ## Note on empty data
+        All fields default to 0 / empty arrays if no executions have been recorded yet.
+      responses:
+        '200':
+          description: Cost analytics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostAnalyticsResponse'
+              example:
+                totalCostUsd: 12.456789
+                avgCostPerIntent: 0.003200
+                costOverTime:
+                  - date: "May 01"
+                    totalCost: 2.10
+                  - date: "May 02"
+                    totalCost: 3.45
+                costByAdapter:
+                  - adapterName: "anthropic-claude"
+                    totalCost: 8.90
+                  - adapterName: "openai-gpt4o"
+                    totalCost: 3.55
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/analytics/drift:
+    get:
+      tags: [Analytics]
+      summary: Get drift analytics for the tenant
+      description: |
+        Returns AI adapter drift metrics for the tenant over a configurable look-back window.
+
+        ## What is Drift?
+        Drift measures how much an AI adapter's outputs deviate from a baseline over time.
+        High drift may indicate model updates, prompt sensitivity, or data distribution shifts.
+
+        ## Response Fields
+        | Field | Description |
+        |-------|-------------|
+        | `overallDrift` | Weighted average drift across all adapters |
+        | `lookbackDays` | The window used for this query |
+        | `summary` | Per-adapter drift statistics |
+        | `trend` | Daily drift trend for charting |
+
+        ## Look-back Window
+        Default is 30 days. Maximum is 90 days.
+      parameters:
+        - name: days
+          in: query
+          description: Look-back window in days (1–90, default 30)
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 90
+      responses:
+        '200':
+          description: Drift analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriftAnalyticsResponse'
+              example:
+                overallDrift: 0.0342
+                lookbackDays: 30
+                summary:
+                  - adapterId: "adapter-uuid"
+                    adapterName: "anthropic-claude"
+                    avgDriftScore: 0.0312
+                trend:
+                  - date: "2026-05-01"
+                    avgDrift: 0.028
+                    avgCost: 0.003
+                    avgLatency: 1200
+                    executionCount: 42
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-roles: [sys_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # EXECUTIONS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/executions:
+    get:
+      tags: [Executions]
+      summary: List execution records for the tenant
+      description: |
+        Returns a paginated list of AI execution records for the authenticated tenant.
+        Each record represents one AI adapter call triggered by an intent.
+
+        ## Filtering
+        - `phase` — filter by execution state (`EXECUTING`, `COMPLETED`, `FAILED`)
+        - `adapterId` — filter to a specific AI adapter
+
+        ## Size Limit
+        Maximum 200 records per request. Use `size=50` for dashboard views.
+      parameters:
+        - name: size
+          in: query
+          description: Max records to return (default 50, max 200)
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: phase
+          in: query
+          description: Filter by execution phase
+          schema:
+            type: string
+            enum: [EXECUTING, COMPLETED, FAILED]
+        - name: adapterId
+          in: query
+          description: Filter by AI adapter UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Execution record list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionRecord'
+              example:
+                - executionId: "exec-uuid"
+                  intentId: "intent-uuid"
+                  adapterName: "anthropic-claude"
+                  phase: "COMPLETED"
+                  costUsd: 0.0032
+                  latencyMs: 1200
+                  executedAt: "2026-05-09T10:00:05Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-roles: [sys_admin, tenant_user]
+
+  /api/executions/by-intent/{intentId}:
+    get:
+      tags: [Executions]
+      summary: Get executions for a specific intent
+      description: |
+        Returns all execution records for a specific intent ID.
+        An intent may have multiple executions if it was retried or routed to
+        multiple adapters.
+      parameters:
+        - $ref: '#/components/parameters/intentId'
+      responses:
+        '200':
+          description: Execution records for the intent
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecutionRecord'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-roles: [sys_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # API KEYS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/api-keys:
+    get:
+      tags: [API Keys]
+      summary: List API keys for the tenant
+      description: |
+        Returns all API keys for the authenticated tenant.
+        The raw key value is **never** returned in list responses — only the
+        prefix (first few characters) for identification.
+      responses:
+        '200':
+          description: API key list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiKeyResponse'
+              example:
+                - id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  name: "Production Integration Key"
+                  prefix: "dm_live_abc1"
+                  isActive: true
+                  createdAt: "2026-05-01T00:00:00Z"
+                  expiresAt: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    post:
+      tags: [API Keys]
+      summary: Create a new API key
+      description: |
+        Creates a new API key for programmatic access to the control plane.
+
+        ## ⚠️ Important
+        The raw key value is returned **only once** in the `key` field of the response.
+        Store it securely (e.g. in a secrets manager). It cannot be retrieved again —
+        you must create a new key if lost.
+
+        ## Expiry
+        Set `expiryDays` to automatically expire the key after N days.
+        Omit or set to `null` for a non-expiring key.
+
+        ## Scopes
+        Scopes are stored for informational purposes. Authorization is enforced
+        by the role on the bearer token, not by key scopes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequest'
+            example:
+              name: "Production Integration Key"
+              scopes: ["intents:write", "intents:read"]
+              expiryDays: 90
+      responses:
+        '200':
+          description: |
+            API key created. The `key` field contains the raw value — store it now.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreatedResponse'
+              example:
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                name: "Production Integration Key"
+                key: "dm_live_abc123xyz456..."
+        '400':
+          description: Key name is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-roles: [sys_admin, tenant_user]
+
+  /api/api-keys/{id}:
+    delete:
+      tags: [API Keys]
+      summary: Revoke an API key
+      description: |
+        Permanently revokes an API key. Any requests using this key will
+        immediately start receiving 401 responses.
+        This action cannot be undone.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Key revoked successfully
+        '404':
+          description: API key not found or does not belong to this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "API key not found or access denied"
+      x-roles: [sys_admin, tenant_admin]
+
+  # ═══════════════════════════════════════════════════════════════
+  # AUDIT LOG
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/audit:
+    get:
+      tags: [Audit]
+      summary: Query the audit log
+      description: |
+        Returns a paginated audit log of significant actions taken within the tenant.
+        The audit log is immutable — entries cannot be deleted or modified.
+
+        ## Logged Actions
+        - `POLICY_CREATED`, `POLICY_UPDATED`, `POLICY_DELETED`
+        - `API_KEY_CREATED`, `API_KEY_REVOKED`
+        - `MEMBER_INVITED`, `MEMBER_REMOVED`
+        - `INTENT_SUBMITTED`, `INTENT_DELETED`
+
+        ## Filtering
+        - `userId` — filter to actions by a specific user
+        - `action` — filter to a specific action type
+
+        ## Page Size
+        Maximum 200 entries per request. Use `size=50` for dashboards.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: userId
+          in: query
+          description: Filter by user ID (Zitadel sub)
+          schema:
+            type: string
+        - name: action
+          in: query
+          description: Filter by action type
+          schema:
+            type: string
+            example: POLICY_CREATED
+      responses:
+        '200':
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+              example:
+                content:
+                  - id: "audit-uuid"
+                    action: "POLICY_CREATED"
+                    resourceType: "POLICY"
+                    resourceId: "policy-uuid"
+                    details: "Created: Max cost per execution"
+                    createdAt: "2026-05-09T10:00:00Z"
+                total: 125
+                page: 0
+                size: 50
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # MEMBERS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/members:
+    get:
+      tags: [Members]
+      summary: List organization members
+      description: |
+        Returns all members of the organizations the authenticated user belongs to.
+        Each entry shows the user's role within the organization.
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MemberResponse'
+              example:
+                - userId: "user-uuid"
+                  organizationId: "org-uuid"
+                  tenantId: "tenant-uuid"
+                  role: "OWNER"
+                  permissions: ["ALL"]
+
+  /api/members/{userId}:
+    delete:
+      tags: [Members]
+      summary: Remove a member from the organization
+      description: |
+        Deactivates a user's membership in the organization.
+        The user's account in Zitadel is not affected — only their
+        organization membership is removed.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: UUID of the user to remove
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Member removed
+
+  /api/members/{userId}/role:
+    patch:
+      tags: [Members]
+      summary: Update a member's role
+      description: |
+        Changes the role of an existing organization member.
+
+        ## Available Roles
+        | Role | Description |
+        |------|-------------|
+        | `OWNER` | Full control including billing and member management |
+        | `ADMIN` | Can manage intents, policies, and members |
+        | `MEMBER` | Standard access — submit intents, view analytics |
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [OWNER, ADMIN, MEMBER]
+            example:
+              role: "ADMIN"
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponse'
+
+  # ═══════════════════════════════════════════════════════════════
+  # INVITATIONS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/invitations:
+    get:
+      tags: [Invitations]
+      summary: List pending invitations for the tenant
+      description: Returns all pending (not yet accepted) invitations for the tenant.
+      responses:
+        '200':
+          description: Invitation list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InvitationResponse'
+              example:
+                - id: "inv-uuid"
+                  email: "bob@example.com"
+                  role: "tenant_user"
+                  status: "PENDING"
+                  createdAt: "2026-05-09T10:00:00Z"
+
+    post:
+      tags: [Invitations]
+      summary: Invite a user to the tenant
+      description: |
+        Sends an invitation email to the specified address. When the invitee
+        registers and logs in, they will be automatically associated with this tenant.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the invitee
+                role:
+                  type: string
+                  enum: [tenant_user, tenant_admin]
+                  description: Role to assign when the invitation is accepted
+            example:
+              email: "bob@example.com"
+              role: "tenant_user"
+      responses:
+        '200':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationResponse'
+
+  /api/invitations/{id}:
+    delete:
+      tags: [Invitations]
+      summary: Revoke an invitation
+      description: |
+        Revokes a pending invitation. The invitee will no longer be able to
+        use the invitation link to join the tenant.
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Invitation revoked
+
+  # ═══════════════════════════════════════════════════════════════
+  # ORGANIZATION
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/org:
+    get:
+      tags: [Organization]
+      summary: Get organization profile
+      description: |
+        Returns the organization profile for the authenticated tenant.
+        Used by the dashboard header and organization settings page.
+      responses:
+        '200':
+          description: Organization profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgResponse'
+              example:
+                id: "tenant-uuid"
+                name: "Acme Corp"
+                plan: "free"
+                logoInitial: "A"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/org/branding:
+    get:
+      tags: [Organization]
+      summary: Get org branding settings
+      description: |
+        Returns the branding configuration for the tenant's organization.
+        Used to customize the appearance of the tenant's workspace.
+      responses:
+        '200':
+          description: Branding settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandingResponse'
+              example:
+                orgName: "Acme Corp"
+                primaryColor: "#2563eb"
+                logoUrl: null
+                updatedAt: "2026-05-01T00:00:00Z"
+        '404':
+          description: Branding not yet configured for this tenant
+      x-roles: [sys_admin, tenant_user]
+
+    patch:
+      tags: [Organization]
+      summary: Update org branding
+      description: |
+        Updates branding settings for the tenant's organization.
+        Partial updates are supported — only supply the fields you want to change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandingRequest'
+            example:
+              orgName: "Acme Corp"
+              primaryColor: "#7c3aed"
+      responses:
+        '200':
+          description: Branding updated
+      x-roles: [sys_admin, tenant_user]
+
+  /api/projects:
+    get:
+      tags: [Organization]
+      summary: List projects for the tenant
+      description: |
+        Returns all projects for the authenticated tenant.
+        Each tenant starts with one default project ("Default Project", Production environment).
+      responses:
+        '200':
+          description: Project list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectResponse'
+              example:
+                - id: "tenant-uuid"
+                  name: "Default Project"
+                  environment: "Production"
+                  description: "Default project"
+                  isDefault: true
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+    post:
+      tags: [Organization]
+      summary: Create a project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                environment:
+                  type: string
+                  default: Production
+                description:
+                  type: string
+            example:
+              name: "Staging Project"
+              environment: "Staging"
+              description: "For pre-production testing"
+      responses:
+        '200':
+          description: Project created
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # CREDITS
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/credits/balance:
+    get:
+      tags: [Credits]
+      summary: Get credit balance for the tenant
+      description: |
+        Returns the current credit balance and usage for the authenticated tenant.
+
+        ## Credit System
+        - New tenants receive a registration credit gift
+        - Monthly allocation resets at the billing cycle
+        - Credits are consumed by intent executions
+
+        ## Response Fields
+        | Field | Description |
+        |-------|-------------|
+        | `balance` | Current available credits |
+        | `monthlyAllocation` | Total credits allocated this month |
+        | `used` | Credits consumed this month |
+        | `plan` | Current subscription plan |
+      responses:
+        '200':
+          description: Credit balance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditBalance'
+              example:
+                balance: 485
+                monthlyAllocation: 500
+                used: 15
+                plan: "free"
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  /api/credits/ledger:
+    get:
+      tags: [Credits]
+      summary: Get credit transaction ledger
+      description: |
+        Returns a paginated history of credit transactions for the tenant.
+        Includes grants (registration gift, monthly allocation, purchases)
+        and debits (intent executions).
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Credit ledger
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditLedgerPage'
+      x-roles: [sys_admin, tenant_admin, tenant_user]
+
+  # ═══════════════════════════════════════════════════════════════
+  # FEEDBACK
+  # ═══════════════════════════════════════════════════════════════
+
+  /api/admin/feedback:
+    post:
+      tags: [Feedback]
+      summary: Submit product feedback
+      description: |
+        Submits feedback from the authenticated user. The user must exist in the
+        database and have an active account.
+
+        ## Categories
+        | Category | Description |
+        |----------|-------------|
+        | `bug` | Something is broken or not working as expected |
+        | `feature` | Request for a new feature or improvement |
+        | `billing` | Billing or payment related feedback |
+        | `general` | General comments or suggestions |
+
+        ## Rating
+        1 = Very dissatisfied, 5 = Very satisfied
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            example:
+              rating: 4
+              category: "feature"
+              comment: "It would be great to have webhook support for execution events"
+              page: "/dashboard"
+      responses:
+        '201':
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Feedback received — thank you!"
+        '400':
+          description: Invalid category or rating out of range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Account is suspended
+
+    get:
+      tags: [Feedback]
+      summary: List all feedback (sys_admin only)
+      description: |
+        Returns all feedback submissions across all tenants.
+        This endpoint is restricted to `sys_admin` role only.
+
+        ## Filtering
+        - `category` — filter by feedback category
+        - `minRating` — return only feedback with rating ≥ this value
+        - `limit` — max records to return (default 50, max 200)
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [bug, feature, billing, general]
+        - name: minRating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        '200':
+          description: Feedback list
+        '403':
+          description: sys_admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Access denied — sys_admin role required"
+      x-roles: [sys_admin]
+
+  # ═══════════════════════════════════════════════════════════════
+  # HEALTH
+  # ═══════════════════════════════════════════════════════════════
+
+  /q/health:
+    get:
+      tags: [Health]
+      summary: Full health check
+      description: |
+        Returns the health status of all infrastructure components.
+        No authentication required. Use this for monitoring and uptime checks.
+
+        ## Checks Included
+        - PostgreSQL connection
+        - Redis connection and PONG response
+        - Kafka messaging channels
+        - Lock manager
+
+        ## Status Values
+        - `UP` — component is healthy
+        - `DOWN` — component is unhealthy (check `data` for details)
+      security: []
+      responses:
+        '200':
+          description: All services healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "UP"
+                checks:
+                  - name: "Database connections health check"
+                    status: "UP"
+                    data:
+                      "<default>": "UP"
+                  - name: "Redis connection health check"
+                    status: "UP"
+                    data:
+                      default: "PONG"
+                  - name: "lock-manager"
+                    status: "UP"
+        '503':
+          description: One or more services are unhealthy
+
+# ═══════════════════════════════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════════════════════════════
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token obtained from Zitadel OAuth2.
+
+        **Auth URL:** `https://decisionmesh-1pgrry.eu1.zitadel.cloud/oauth/v2/authorize`
+        **Token URL:** `https://decisionmesh-1pgrry.eu1.zitadel.cloud/oauth/v2/token`
+        **Client ID:** `368134611768783581`
+        **Scopes:** `openid profile email`
+
+        For Postman: use the **Authorization Code** grant type with
+        callback URL `https://oauth.pstmn.io/v1/callback`.
+
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: Resource UUID
+      schema:
+        type: string
+        format: uuid
+
+    intentId:
+      name: intentId
+      in: path
+      required: true
+      description: Intent UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid Bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Unauthorized"
+
+    Forbidden:
+      description: |
+        Valid token but insufficient role, or onboarding not complete.
+        If the message contains "Missing tenantId", the user has not yet
+        called `POST /api/onboard/setup-tenant`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Missing tenantId — onboarding not complete"
+
+    NotFound:
+      description: Resource not found or does not belong to this tenant
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Not found"
+
+    BadRequest:
+      description: Invalid request body or missing required fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "accountType is required"
+
+    ServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Internal server error"
+
+  schemas:
+
+    ErrorResponse:
+      type: object
+      description: Standard error response body
+      properties:
+        message:
+          type: string
+          description: Human-readable error description
+
+    OnboardMeResponse:
+      type: object
+      description: Current user's profile and onboarding status
+      properties:
+        externalId:
+          type: string
+          description: Zitadel user subject (numeric string)
+          example: "370876452234626240"
+        email:
+          type: string
+          format: email
+          description: User's email address (may be blank if not yet fetched from Zitadel)
+        name:
+          type: string
+          description: User's display name
+        tenantId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Tenant UUID, or null if setup-tenant not yet called
+        onboarded:
+          type: boolean
+          description: "`true` if the user has completed setup-tenant. If `false`, redirect to /onboarding."
+
+    EnsureRequest:
+      type: object
+      description: |
+        Optional body for the ensure endpoint.
+        Provide `email` and `name` from userinfo to ensure they are stored correctly.
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+
+    EnsureResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Internal user UUID
+        tenantId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Tenant UUID, or null if setup-tenant not yet called
+        onboarded:
+          type: boolean
+          description: Whether the user has completed onboarding
+        email:
+          type: string
+          description: Stored email address
+
+    SetupTenantRequest:
+      type: object
+      required: [accountType]
+      properties:
+        accountType:
+          type: string
+          enum: [INDIVIDUAL, ORGANIZATION]
+          description: Type of workspace to create
+        companyName:
+          type: string
+          description: Required when `accountType` is `ORGANIZATION`
+          example: "Acme Corp"
+        companySize:
+          type: string
+          description: Optional company size range
+          example: "10-50"
+
+    SetupTenantResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Tenant setup complete"
+        tenantId:
+          type: string
+          format: uuid
+        accountType:
+          type: string
+          enum: [INDIVIDUAL, ORGANIZATION]
+        requiresTokenRefresh:
+          type: boolean
+          description: |
+            If `true`, the frontend must call `auth.signinSilent()` to refresh
+            the token before making further API calls. The `tenant_user` role
+            was just assigned and the current token does not contain it yet.
+
+    IntentRequest:
+      type: object
+      description: AI intent submission payload
+      properties:
+        intentType:
+          type: string
+          description: The type of AI operation to perform (must match a library intent type)
+          example: "FRAUD_DETECTION"
+        payload:
+          type: object
+          description: Intent-specific input data — structure depends on `intentType`
+          example:
+            transactionId: "txn_abc123"
+            amount: 5000
+            currency: "USD"
+
+    IntentPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntentDetail'
+        totalElements:
+          type: integer
+          description: Total number of intents across all pages
+        totalPages:
+          type: integer
+        number:
+          type: integer
+          description: Current page number (zero-based)
+        size:
+          type: integer
+          description: Page size used for this response
+
+    IntentDetail:
+      type: object
+      properties:
+        intentId:
+          type: string
+          format: uuid
+        intentType:
+          type: string
+        phase:
+          type: string
+          enum: [SUBMITTED, EXECUTING, COMPLETED, FAILED]
+        tenantId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IntentEvent:
+      type: object
+      description: A single event in the intent processing lifecycle
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        intentId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          description: Type of event (e.g. INTENT_RECEIVED, ADAPTER_SELECTED, EXECUTION_COMPLETED)
+        payload:
+          type: object
+          nullable: true
+          description: Event-specific data
+        createdAt:
+          type: string
+          format: date-time
+
+    ExecutionRecord:
+      type: object
+      description: Record of a single AI adapter execution
+      properties:
+        executionId:
+          type: string
+          format: uuid
+        intentId:
+          type: string
+          format: uuid
+        adapterId:
+          type: string
+          format: uuid
+        adapterName:
+          type: string
+          example: "anthropic-claude"
+        phase:
+          type: string
+          enum: [EXECUTING, COMPLETED, FAILED]
+        costUsd:
+          type: number
+          format: double
+          description: Cost of this execution in USD
+        latencyMs:
+          type: integer
+          description: End-to-end latency in milliseconds
+        driftScore:
+          type: number
+          format: double
+          nullable: true
+        executedAt:
+          type: string
+          format: date-time
+
+    PolicyEvaluation:
+      type: object
+      description: Result of a governance policy evaluation against an intent
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        policyName:
+          type: string
+        passed:
+          type: boolean
+          description: Whether the policy evaluation passed
+        reason:
+          type: string
+          nullable: true
+          description: Explanation if the policy failed
+        evaluatedAt:
+          type: string
+          format: date-time
+
+    IntentLibraryItem:
+      type: object
+      description: A pre-built intent template from the library
+      properties:
+        id:
+          type: string
+          format: uuid
+        vertical:
+          type: string
+          example: "FINTECH"
+        category:
+          type: string
+          example: "FRAUD_DETECTION"
+        intentType:
+          type: string
+          example: "TRANSACTION_FRAUD_SCORE"
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["rbi", "pci-dss"]
+        riskLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        samplePayload:
+          type: object
+          description: Example payload structure for this intent type
+        version:
+          type: string
+          example: "v1.0.0"
+
+    CategorySummary:
+      type: object
+      properties:
+        category:
+          type: string
+          example: "FRAUD_DETECTION"
+        count:
+          type: integer
+          example: 45
+
+    SavePolicyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Human-readable policy name
+          example: "Max cost per execution"
+        description:
+          type: string
+          description: Explanation of what this policy enforces
+        rules:
+          type: array
+          description: Policy rule definitions
+          items:
+            type: object
+
+    PolicyResponse:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        rules:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiKeyResponse:
+      type: object
+      description: API key summary (raw key never returned after creation)
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        prefix:
+          type: string
+          description: First few characters of the key for identification
+          example: "dm_live_abc1"
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ApiKeyCreatedResponse:
+      type: object
+      description: API key creation response — includes raw key shown once only
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key:
+          type: string
+          description: |
+            Raw API key value. **Store this securely — it cannot be retrieved again.**
+
+    CreateApiKeyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: Descriptive name for the key
+        scopes:
+          type: array
+          items:
+            type: string
+          description: Informational scopes (authorization is enforced by JWT role)
+        expiryDays:
+          type: integer
+          nullable: true
+          description: Days until expiry. Omit for non-expiring key.
+
+    AuditPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+        size:
+          type: integer
+
+    AuditEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          description: Zitadel subject of the user who performed the action
+        action:
+          type: string
+          description: Action type (e.g. POLICY_CREATED, API_KEY_REVOKED)
+        resourceType:
+          type: string
+          description: Type of resource affected (e.g. POLICY, API_KEY)
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+        details:
+          type: string
+          nullable: true
+          description: Human-readable details about the action
+        createdAt:
+          type: string
+          format: date-time
+
+    CostAnalyticsResponse:
+      type: object
+      properties:
+        totalCostUsd:
+          type: number
+          format: double
+          description: Total cost in USD across all executions
+        avgCostPerIntent:
+          type: number
+          format: double
+          description: Average cost per intent (weighted average across adapters)
+        costOverTime:
+          type: array
+          description: Daily cost breakdown for time-series charts
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                description: Formatted date label (e.g. "May 01")
+              totalCost:
+                type: number
+                format: double
+        costByAdapter:
+          type: array
+          description: Cost breakdown by AI adapter
+          items:
+            type: object
+            properties:
+              adapterName:
+                type: string
+              totalCost:
+                type: number
+                format: double
+
+    DriftAnalyticsResponse:
+      type: object
+      properties:
+        overallDrift:
+          type: number
+          format: double
+          description: Weighted average drift score across all adapters (0.0 = no drift)
+        lookbackDays:
+          type: integer
+          description: Look-back window used for this response
+        summary:
+          type: array
+          description: Per-adapter drift statistics
+          items:
+            type: object
+            properties:
+              adapterId:
+                type: string
+                format: uuid
+              adapterName:
+                type: string
+              avgDriftScore:
+                type: number
+                format: double
+        trend:
+          type: array
+          description: Daily drift trend for time-series charts
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              avgDrift:
+                type: number
+              avgCost:
+                type: number
+              avgLatency:
+                type: number
+              executionCount:
+                type: integer
+
+    MemberResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [OWNER, ADMIN, MEMBER]
+        permissions:
+          type: array
+          items:
+            type: string
+
+    InvitationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, REVOKED]
+        createdAt:
+          type: string
+          format: date-time
+
+    BrandingRequest:
+      type: object
+      description: Org branding update payload (all fields optional)
+      properties:
+        orgName:
+          type: string
+        primaryColor:
+          type: string
+          description: Hex color code
+          example: "#2563eb"
+        logoUrl:
+          type: string
+          format: uri
+          nullable: true
+
+    BrandingResponse:
+      type: object
+      properties:
+        orgName:
+          type: string
+        primaryColor:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrgResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Tenant UUID
+        name:
+          type: string
+          description: Organization display name
+        plan:
+          type: string
+          example: "free"
+        logoInitial:
+          type: string
+          description: First letter of org name for avatar display
+          example: "A"
+
+    ProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        environment:
+          type: string
+          example: "Production"
+        description:
+          type: string
+        isDefault:
+          type: boolean
+
+    CreditBalance:
+      type: object
+      properties:
+        balance:
+          type: integer
+          description: Current available credits
+        monthlyAllocation:
+          type: integer
+          description: Total credits allocated this billing month
+        used:
+          type: integer
+          description: Credits consumed this month
+        plan:
+          type: string
+          description: Current subscription plan
+          example: "free"
+
+    CreditLedgerPage:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        number:
+          type: integer
+        size:
+          type: integer
+
+    FeedbackRequest:
+      type: object
+      required: [rating, category]
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Satisfaction rating from 1 (very dissatisfied) to 5 (very satisfied)
+        category:
+          type: string
+          enum: [bug, feature, billing, general]
+          description: Feedback category
+        comment:
+          type: string
+          maxLength: 1000
+          description: Optional free-text comment
+        page:
+          type: string
+          maxLength: 255
+          description: Page or screen where the feedback was submitted
+          example: "/dashboard"
+        userAgent:
+          type: string
+          maxLength: 512
+          description: Browser user agent string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum: [UP, DOWN]
+              data:
+                type: object
+                additionalProperties: true
