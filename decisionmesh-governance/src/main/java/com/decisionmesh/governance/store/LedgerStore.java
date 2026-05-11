@@ -1,6 +1,6 @@
 package com.decisionmesh.governance.store;
 
-import com.decisionmesh.governance.ledger.LedgerEntry;
+import com.decisionmesh.common.ledger.LedgerEntry;
 import io.smallrye.mutiny.Uni;
 import java.util.List;
 import java.util.UUID;

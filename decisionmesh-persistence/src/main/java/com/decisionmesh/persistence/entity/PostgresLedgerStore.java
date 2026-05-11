@@ -1,4 +1,4 @@
-package com.decisionmesh.persistence.store;
+package com.decisionmesh.persistence.entity;
 
 import com.decisionmesh.common.ledger.LedgerEntry;
 import com.decisionmesh.common.store.LedgerStore;
@@ -6,6 +6,7 @@ import com.decisionmesh.governance.entity.LedgerEntryEntity;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.UUID;
  * order for deterministic replay.
  */
 @ApplicationScoped
+@Priority(1)
 public class PostgresLedgerStore implements LedgerStore {
 
     // ── Append ────────────────────────────────────────────────────────────────

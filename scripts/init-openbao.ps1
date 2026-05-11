@@ -5,7 +5,9 @@
 #
 # Usage: .\scripts\init-openbao.ps1
 # =============================================================
-. .\scripts\set-vault-env.ps1
+
+. "$PSScriptRoot\set-vault-env.ps1"
+
 $VAULT_ADDR  = "http://localhost:8200"
 $VAULT_TOKEN = "dev-root-token"
 $BASE_URL    = "$VAULT_ADDR/v1/secret/data/decisionmesh"
@@ -16,7 +18,7 @@ Write-Host "Waiting for OpenBao to be ready..."
 $ready = $false
 for ($i = 0; $i -lt 30; $i++) {
     try {
-        $status = Invoke-RestMethod "$VAULT_ADDR/v1/sys/health" -EA Stop
+        Invoke-RestMethod "$VAULT_ADDR/v1/sys/health" -EA Stop | Out-Null
         $ready = $true
         break
     } catch {
@@ -45,12 +47,23 @@ Invoke-RestMethod "$BASE_URL/db" -Method POST -Headers $HEADERS -Body (ConvertTo
 Write-Host "  [OK] db"
 
 # ----------------------------------------------------------
+# Redis — password must match REDIS_PASSWORD in .env
+# ----------------------------------------------------------
+Invoke-RestMethod "$BASE_URL/redis" -Method POST -Headers $HEADERS -Body (ConvertTo-Json @{
+    data = @{
+        "quarkus.redis.hosts"    = "redis://localhost:6379"
+        "quarkus.redis.password" = "redis_local"
+    }
+}) | Out-Null
+Write-Host "  [OK] redis"
+
+# ----------------------------------------------------------
 # Kafka — localhost for local dev (not kafka:9092)
 # ----------------------------------------------------------
 Invoke-RestMethod "$BASE_URL/kafka" -Method POST -Headers $HEADERS -Body (ConvertTo-Json @{
     data = @{
-        "kafka.bootstrap.servers"                                    = "localhost:9092"
-        "mp.messaging.connector.smallrye-kafka.bootstrap.servers"   = "localhost:9092"
+        "kafka.bootstrap.servers"                                  = "localhost:9092"
+        "mp.messaging.connector.smallrye-kafka.bootstrap.servers" = "localhost:9092"
     }
 }) | Out-Null
 Write-Host "  [OK] kafka"
@@ -60,12 +73,12 @@ Write-Host "  [OK] kafka"
 # ----------------------------------------------------------
 Invoke-RestMethod "$BASE_URL/auth" -Method POST -Headers $HEADERS -Body (ConvertTo-Json @{
     data = @{
-        "quarkus.oidc.auth-server-url"    = "https://decisionmesh-1pgrry.eu1.zitadel.cloud"
-        "quarkus.oidc.client-id"          = "368134611768783581"
-        "quarkus.oidc.application-type"   = "hybrid"
-        "quarkus.oidc.redirect-path"      = "/auth/callback"
-        "zitadel_service_account_token"   = "REPLACE_WITH_REAL_TOKEN"
-        "username"                        = "REPLACE_WITH_REAL_EMAIL"
+        "quarkus.oidc.auth-server-url"  = "https://decisionmesh-1pgrry.eu1.zitadel.cloud"
+        "quarkus.oidc.client-id"        = "368134611768783581"
+        "quarkus.oidc.application-type" = "hybrid"
+        "quarkus.oidc.redirect-path"    = "/auth/callback"
+        "zitadel_service_account_token" = "REPLACE_WITH_REAL_TOKEN"
+        "username"                      = "REPLACE_WITH_REAL_EMAIL"
     }
 }) | Out-Null
 Write-Host "  [OK] auth"
@@ -98,9 +111,9 @@ Write-Host "  [OK] stripe"
 # ----------------------------------------------------------
 Invoke-RestMethod "$BASE_URL/razorpay" -Method POST -Headers $HEADERS -Body (ConvertTo-Json @{
     data = @{
-        "razorpay.key.id"        = "rzp_test_local_dummy"
-        "razorpay.key.secret"    = "razorpay-local-dummy"
-        "razorpay.webhook.secret"= "razorpay-webhook-dummy"
+        "razorpay.key.id"         = "rzp_test_local_dummy"
+        "razorpay.key.secret"     = "razorpay-local-dummy"
+        "razorpay.webhook.secret" = "razorpay-webhook-dummy"
     }
 }) | Out-Null
 Write-Host "  [OK] razorpay"

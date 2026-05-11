@@ -51,16 +51,16 @@ public class LedgerEntry {
                 previousHash + timestamp.toString();
     }
 
-    public String getCurrentHash() { return currentHash; }
-    public String getPreviousHash() { return previousHash; }
-    public UUID getIntentId() { return intentId; }
-    public String getTenantId() { return tenantId; }
+    public UUID getLedgerId()             { return ledgerId; }
+    public UUID getIntentId()             { return intentId; }
+    public String getTenantId()           { return tenantId; }
+    public long getAggregateVersion()     { return aggregateVersion; }
+    public UUID getEventId()              { return eventId; }
+    public String getEventType()          { return eventType; }
     public String getPolicySnapshotJson() { return policySnapshotJson; }
     public String getBudgetSnapshotJson() { return budgetSnapshotJson; }
-    public String getSlaSnapshotJson() { return slaSnapshotJson; }
-
-    public long getAggregateVersion() { return aggregateVersion; }
-    public UUID getEventId() { return eventId; }
-    public String getEventType() { return eventType; }
-    public Instant getTimestamp() { return timestamp; }
+    public String getSlaSnapshotJson()    { return slaSnapshotJson; }
+    public String getPreviousHash()       { return previousHash; }
+    public String getCurrentHash()        { return currentHash; }
+    public Instant getTimestamp()         { return timestamp; }
 }

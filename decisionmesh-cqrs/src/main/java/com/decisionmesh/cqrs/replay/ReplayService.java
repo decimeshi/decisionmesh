@@ -35,7 +35,7 @@ public class ReplayService {
 
     public Uni<List<ReplayResponse>> replay(UUID intentId) {
         return ledgerStore.load(intentId)
-                .map(this::buildReplayWithValidation);
+                .map((java.util.function.Function<? super List<com.decisionmesh.common.ledger.LedgerEntry>, ? extends List<ReplayResponse>>) this::buildReplayWithValidation);
     }
 
     // ── Tenant-scoped replay (preferred — prevents cross-tenant access) ───────
