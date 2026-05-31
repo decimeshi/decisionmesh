@@ -27,31 +27,62 @@ public class SubscriptionEntity extends PanacheEntityBase {
     public LocalDateTime updatedAt;
 
     public enum Plan {
-        FREE,        // $0  — 500 credits one-time gift, no reset
-        HOBBY,       // $0  — 500 credits/month, credit card required, max 200 users
-        BUILDER,     // $19 — 2,000 credits/month  ← primary revenue driver
-        PRO,         // $49 — 6,000 credits/month, 5 seats
-        ENTERPRISE;  // custom — unlimited, BYOK, dedicated SLA
+        FREE,        // $0       — 100 credits one-time, ALL features unlocked
+        BUILDER,     // $19/mo   — 15,000 credits/month  ← primary revenue driver
+        PRO,         // $49/mo   — 60,000 credits/month, 5 seats, SSO/SAML
+        ENTERPRISE;  // custom   — unlimited, BYOK, BYOM, dedicated SLA
 
-        /** Monthly credit allocation for this plan. */
+        /**
+         * Monthly credit allocation for recurring plans.
+         * FREE returns 0 here because its grant is one-time only —
+         * use initialCredits() for the signup gift.
+         */
         public int monthlyCredits() {
             return switch (this) {
-                case FREE        -> 0;      // one-time gift only — no monthly reset
-                case HOBBY       -> 500;
-                case BUILDER     -> 2_000;
-                case PRO         -> 6_000;
+                case FREE        -> 0;              // one-time only — no monthly reset
+                case BUILDER     -> 15_000;
+                case PRO         -> 60_000;
                 case ENTERPRISE  -> Integer.MAX_VALUE;
             };
         }
 
-        /** Parse from a Stripe price ID stored in session metadata. */
+        /**
+         * One-time credit grant issued at signup / plan activation.
+         * Only FREE gets a one-time grant. Paid plans get monthly credits.
+         */
+        public int initialCredits() {
+            return switch (this) {
+                case FREE        -> 100;   // full product access, 100 credits to evaluate
+                case BUILDER     -> 0;     // covered by monthlyCredits()
+                case PRO         -> 0;
+                case ENTERPRISE  -> 0;
+            };
+        }
+
+        /**
+         * Parse from a Stripe price ID stored in session metadata.
+         * Covers all billing intervals (monthly, quarterly, halfyearly, yearly).
+         * HOBBY removed — no longer a supported plan.
+         */
         public static Plan fromPriceId(String priceId) {
             if (priceId == null) return FREE;
             return switch (priceId) {
-                case "price_hobby_monthly"   -> HOBBY;
-                case "price_builder_monthly" -> BUILDER;
-                case "price_pro_monthly"     -> PRO;
-                default                      -> FREE;
+                // Builder — all intervals
+                case "builder",
+                     "builder_quarterly",
+                     "builder_halfyearly",
+                     "builder_yearly"     -> BUILDER;
+
+                // Pro — all intervals
+                case "pro",
+                     "pro_quarterly",
+                     "pro_halfyearly",
+                     "pro_yearly"         -> PRO;
+
+                // Enterprise — custom / contact sales
+                case "enterprise"         -> ENTERPRISE;
+
+                default                   -> FREE;
             };
         }
     }

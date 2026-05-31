@@ -37,7 +37,7 @@ public class TestBeansConfig {
 
     // ── ExecutionRepositoryPort ───────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public ExecutionRepositoryPort executionRepositoryPort() {
         return new ExecutionRepositoryPort() {
             @Override
@@ -54,7 +54,7 @@ public class TestBeansConfig {
 
     // ── IntentRepositoryPort ──────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public IntentRepositoryPort intentRepositoryPort() {
         return new IntentRepositoryPort() {
             @Override
@@ -79,14 +79,14 @@ public class TestBeansConfig {
 
     // ── IntentEventRepositoryPort ─────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public IntentEventRepositoryPort intentEventRepositoryPort() {
         return events -> Uni.createFrom().voidItem();
     }
 
     // ── PlanRepositoryPort ────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public PlanRepositoryPort planRepositoryPort() {
         return new PlanRepositoryPort() {
             @Override
@@ -109,7 +109,7 @@ public class TestBeansConfig {
 
     // ── AdapterLearningPort ───────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public AdapterLearningPort adapterLearningPort() {
         return new AdapterLearningPort() {
             @Override
@@ -126,7 +126,7 @@ public class TestBeansConfig {
 
     // ── LearningEngine ────────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public LearningEngine learningEngine() {
         return new LearningEngine() {
             @Override
@@ -143,7 +143,7 @@ public class TestBeansConfig {
 
     // ── ExecutionEngine ───────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public ExecutionEngine executionEngine() {
         return (plan, attempt) -> Uni.createFrom().failure(
                 new UnsupportedOperationException("test stub"));
@@ -151,7 +151,7 @@ public class TestBeansConfig {
 
     // ── TelemetrySink ─────────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public TelemetrySink telemetrySink() {
         return new TelemetrySink() {
             @Override
@@ -168,7 +168,7 @@ public class TestBeansConfig {
 
     // ── TelemetryPublisher ────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public TelemetryPublisher telemetryPublisher() {
         return new TelemetryPublisher() {
             @Override
@@ -187,7 +187,7 @@ public class TestBeansConfig {
 
     // ── RateLimiter ───────────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public RateLimiter rateLimiter() {
         return new RateLimiter() {
             @Override
@@ -199,7 +199,7 @@ public class TestBeansConfig {
 
     // ── LockManager ───────────────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public LockManager lockManager() {
         return new LockManager() {
             @Override
@@ -244,7 +244,7 @@ public class TestBeansConfig {
 
     // ── ReconciliationService ─────────────────────────────────────────────────
 
-    @Produces @Alternative @Priority(1) @ApplicationScoped
+    @Produces @Alternative @Priority(2) @ApplicationScoped
     public ReconciliationService reconciliationService() {
         return new ReconciliationService() {
             @Override

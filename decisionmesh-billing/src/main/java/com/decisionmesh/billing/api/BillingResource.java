@@ -258,10 +258,7 @@ public class BillingResource {
         // Returns both USD (Stripe) and INR (Razorpay) prices
         return Response.ok(List.of(
                 Map.of("id", "free",    "name", "Free",    "usdPrice", 0,  "inrPrice", 0,      "interval", "month",
-                        "credits", 500,  "features", List.of("500 credits (one-time)", "2 adapters", "Basic audit")),
-                Map.of("id", "hobby",   "name", "Hobby",   "usdPrice", 0,  "inrPrice", 0,      "interval", "month",
-                        "stripePriceId", "price_hobby_monthly", "razorpayPriceId", "price_hobby_monthly",
-                        "credits", 2000, "features", List.of("2,000 credits/month", "3 adapters", "Email support")),
+                        "credits", 100,  "features", List.of("100 credits (one-time)", "All adapters", "Full audit log", "Policy builder", "Decision replay", "Budget enforcement")),
                 Map.of("id", "builder", "name", "Builder", "usdPrice", 19, "inrPrice", 1599,   "interval", "month",
                         "stripePriceId", "price_builder_monthly", "razorpayPriceId", "price_builder_monthly",
                         "credits", 15000, "features", List.of("15,000 credits/month", "All adapters", "Priority support")),
@@ -346,7 +343,7 @@ public class BillingResource {
         public String signature;
         public String priceId;
         public String mode;
-        public String plan;          // "hobby" | "builder" | "pro"
+        public String plan;          // "builder" | "pro"
         public Integer creditAmount;
     }
 }

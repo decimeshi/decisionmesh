@@ -12,4 +12,5 @@ public class BillingTestProfile implements QuarkusTestProfile {
                 "quarkus.hibernate-reactive.active", "false"
         );
     }
+
 }

@@ -21,7 +21,6 @@ public class StripeService {
     String cancelUrl;
 
     // ── Inject price IDs from config ──────────────────────────────────────────
-    @ConfigProperty(name = "stripe.price.hobby")           String priceHobby;
     @ConfigProperty(name = "stripe.price.builder")         String priceBuilder;
     @ConfigProperty(name = "stripe.price.pro")             String pricePro;
     @ConfigProperty(name = "stripe.price.credits.starter") String priceCreditsStarter;
@@ -41,7 +40,6 @@ public class StripeService {
     void init() {
         Stripe.apiKey = stripeSecretKey;
         priceMap = Map.ofEntries(
-                Map.entry("hobby",             priceHobby),
                 Map.entry("builder",           priceBuilder),
                 Map.entry("builder_quarterly", priceBuilderQuarterly),
                 Map.entry("builder_halfyearly",priceBuilderHalfYearly),
@@ -60,7 +58,7 @@ public class StripeService {
     // ── Subscription checkout (recurring) ─────────────────────────────────────
 
     /**
-     * Creates a Stripe Checkout Session for a subscription plan (HOBBY / BUILDER / PRO).
+     * Creates a Stripe Checkout Session for a subscription plan (BUILDER / PRO).
      * Returns the hosted checkout URL — frontend redirects to this.
      *
      * Metadata carries orgId and plan so the webhook can read them

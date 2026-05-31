@@ -56,13 +56,13 @@ class CreditLedgerServiceTest {
     // ── grantRegistrationGift ─────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Registration gift appends +500 with REGISTRATION_GIFT reason")
+    @DisplayName("Registration gift appends +100 with REGISTRATION_GIFT reason")
     void grantRegistrationGift_appends500_withCorrectReason() {
         service.grantRegistrationGift(ORG_ID).await().indefinitely();
 
         CreditLedgerEntity entry = captureEntry();
         assertThat(entry.orgId).isEqualTo(ORG_ID);
-        assertThat(entry.amount).isEqualTo(500);
+        assertThat(entry.amount).isEqualTo(100);   // updated: 500 → 100 per new free plan strategy
         assertThat(entry.reason).isEqualTo("REGISTRATION_GIFT");
         assertThat(entry.referenceId).isNull();
     }
@@ -71,9 +71,8 @@ class CreditLedgerServiceTest {
 
     @ParameterizedTest(name = "Plan {0} → {1} credits on monthly reset")
     @CsvSource({
-            "HOBBY,     500",
-            "BUILDER,  2000",
-            "PRO,      6000",
+            "BUILDER,  15000",
+            "PRO,      60000",
     })
     @DisplayName("Monthly allocation reset grants plan-specific credit amount")
     void resetMonthlyAllocation_grantsPlanCredits(String planName, int expectedCredits) {

@@ -36,7 +36,6 @@ class RazorpayServiceTest {
         service.keySecret          = TEST_KEY_SECRET;
         service.webhookSecret      = TEST_WEBHOOK_SECRET;
         // Subscription plan IDs (from application.properties)
-        service.planHobby             = "plan_SdDy1dq630Eqr7";
         service.planBuilder           = "plan_SdDtQreYZOuDuZ";
         service.planPro               = "plan_SdDv8HzOQxPoFm";
         service.planBuilderQuarterly  = "plan_SdR7GBM6uj4NqV";

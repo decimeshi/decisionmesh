@@ -19,11 +19,12 @@ public class BudgetSnapshot {
         this.currency        = currency;
         this.plan            = plan;
 
+        // maxRequests matches SubscriptionEntity.Plan credits exactly
+        // FREE: 100 one-time, BUILDER: 15k/mo, PRO: 60k/mo
         this.maxRequests = switch (plan) {
-            case FREE        ->       100;
-            case HOBBY       ->       500;
-            case BUILDER     ->     2_000;
-            case PRO         ->    10_000;
+            case FREE        ->         100;
+            case BUILDER     ->      15_000;
+            case PRO         ->      60_000;
             case ENTERPRISE  -> Integer.MAX_VALUE;
         };
     }

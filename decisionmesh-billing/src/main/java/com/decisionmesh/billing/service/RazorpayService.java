@@ -64,7 +64,6 @@ public class RazorpayService {
         // Build price map: subscription plan IDs map to 0 (Razorpay plan carries amount),
         // credit pack keys map to INR amounts in paise from config.
         this.inrPrices = new java.util.HashMap<>();
-        inrPrices.put(planHobby,           0L);
         inrPrices.put(planBuilder,         0L);   // subscription amount is on the plan itself
         inrPrices.put(planPro,             0L);
         inrPrices.put("credits_starter",   amountCreditsStarter);
@@ -83,7 +82,6 @@ public class RazorpayService {
     //   Subscriptions → real Razorpay plan IDs (plan_xxx) from application.properties
     //   Credit packs  → keys "credits_starter" | "credits_growth" | "credits_scale"
     //                   amounts read from razorpay.credits.*.amount in properties
-    @ConfigProperty(name = "razorpay.hobby.plan",            defaultValue = "") String planHobby;
     @ConfigProperty(name = "razorpay.builder.plan",          defaultValue = "") String planBuilder;
     @ConfigProperty(name = "razorpay.pro.plan",              defaultValue = "") String planPro;
     @ConfigProperty(name = "razorpay.credits.starter.amount",defaultValue = "84900")  long amountCreditsStarter;

@@ -16,7 +16,7 @@ import java.util.UUID;
  * Manages the credit ledger for every org.
  *
  * Credit reasons:
- *   REGISTRATION_GIFT   — 500 credits on first signup, one-time
+ *   REGISTRATION_GIFT   — 100 credits on first signup, one-time (full product access)
  *   SUBSCRIPTION        — monthly allocation reset on invoice.payment_succeeded
  *   PURCHASE            — one-time credit pack purchase
  *   REFERRAL            — referral conversion bonus
@@ -42,8 +42,9 @@ public class CreditLedgerService {
 
     @WithTransaction
     public Uni<Void> grantRegistrationGift(UUID orgId) {
-        Log.infof("[Credits] Registration gift: orgId=%s +500", orgId);
-        return append(orgId, 500, "REGISTRATION_GIFT", null);
+        int credits = Plan.FREE.initialCredits();   // 100 — driven by SubscriptionEntity enum
+        Log.infof("[Credits] Registration gift: orgId=%s +%d", orgId, credits);
+        return append(orgId, credits, "REGISTRATION_GIFT", null);
     }
 
     /**

@@ -19,7 +19,7 @@ public class OrgEntity extends PanacheEntityBase {
     public String name;
 
     @Column(name = "plan", nullable = false, length = 20)
-    public String plan;       // FREE | HOBBY | BUILDER | PRO | ENTERPRISE
+    public String plan;       // FREE | BUILDER | PRO | ENTERPRISE
 
     @Column(name = "created_at")
     public Instant createdAt;

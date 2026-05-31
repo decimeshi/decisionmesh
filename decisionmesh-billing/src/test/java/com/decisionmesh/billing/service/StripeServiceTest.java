@@ -32,7 +32,6 @@ class StripeServiceTest {
     private StripeService service;
 
     // Price IDs matching application.properties
-    private static final String PRICE_HOBBY              = "price_1TLxLuCNFjCgvrWwlVhrIuSI";
     private static final String PRICE_BUILDER            = "price_1TLxJPCNFjCgvrWwtI1Gc0yA";
     private static final String PRICE_PRO                = "price_1TLxKLCNFjCgvrWwfYnN1xBY";
     private static final String PRICE_CREDITS_STARTER    = "price_1TLxPKCNFjCgvrWwv6XIuo2N";
@@ -51,7 +50,6 @@ class StripeServiceTest {
         service.stripeSecretKey       = "sk_test_placeholder";
         service.successUrl            = "http://localhost:3000/billing?success=1";
         service.cancelUrl             = "http://localhost:3000/billing?cancelled=1";
-        service.priceHobby            = PRICE_HOBBY;
         service.priceBuilder          = PRICE_BUILDER;
         service.pricePro              = PRICE_PRO;
         service.priceCreditsStarter   = PRICE_CREDITS_STARTER;
@@ -70,7 +68,6 @@ class StripeServiceTest {
 
     @ParameterizedTest(name = "Key \"{0}\" resolves to expected price ID")
     @CsvSource({
-            "hobby,              price_1TLxLuCNFjCgvrWwlVhrIuSI",
             "builder,            price_1TLxJPCNFjCgvrWwtI1Gc0yA",
             "pro,                price_1TLxKLCNFjCgvrWwfYnN1xBY",
             "credits_starter,    price_1TLxPKCNFjCgvrWwv6XIuo2N",
@@ -170,7 +167,7 @@ class StripeServiceTest {
             sessionMock.when(() -> Session.create(any(SessionCreateParams.class)))
                     .thenAnswer(inv -> { capturedParams.set(inv.getArgument(0)); return mockSession; });
 
-            service.createSubscriptionCheckout("u@e.com", PRICE_HOBBY, "org1", "HOBBY", "monthly");
+            service.createSubscriptionCheckout("u@e.com", PRICE_BUILDER, "org1", "BUILDER", "monthly");
 
             assertThat(capturedParams.get().getSuccessUrl()).contains("session_id={CHECKOUT_SESSION_ID}");
         }

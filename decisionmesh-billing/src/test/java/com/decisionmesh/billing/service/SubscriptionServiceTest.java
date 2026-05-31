@@ -92,7 +92,7 @@ class SubscriptionServiceTest {
     @Test
     @DisplayName("Existing subscription is updated in-place — no new persist called")
     void createOrUpdate_existingSubscription_updatesWithoutNewPersist() {
-        SubscriptionEntity existing = existingEntity(Plan.HOBBY, Status.ACTIVE);
+        SubscriptionEntity existing = existingEntity(Plan.FREE, Status.ACTIVE);
         when(repository.findByStripeSubscriptionId(SUBSCRIPTION_ID))
                 .thenReturn(Uni.createFrom().item(existing));
 
@@ -108,9 +108,9 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    @DisplayName("Plan upgrade from HOBBY to PRO updates existing subscription")
+    @DisplayName("Plan upgrade from FREE to PRO updates existing subscription")
     void createOrUpdate_planUpgrade_updatesExistingEntity() {
-        SubscriptionEntity existing = existingEntity(Plan.HOBBY, Status.ACTIVE);
+        SubscriptionEntity existing = existingEntity(Plan.FREE, Status.ACTIVE);
         when(repository.findByStripeSubscriptionId(SUBSCRIPTION_ID))
                 .thenReturn(Uni.createFrom().item(existing));
 
