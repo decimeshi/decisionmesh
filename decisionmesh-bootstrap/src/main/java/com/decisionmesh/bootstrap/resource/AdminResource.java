@@ -1,6 +1,7 @@
 package com.decisionmesh.bootstrap.resource;
 
 import com.decisionmesh.billing.model.CreditLedgerEntity;
+import com.decisionmesh.bootstrap.service.DataRetentionService;
 import com.decisionmesh.persistence.model.WebhookEventEntity;
 import com.decisionmesh.billing.service.CreditLedgerService;
 import com.decisionmesh.contracts.security.entity.UserEntity;
@@ -9,6 +10,7 @@ import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.quarkus.logging.Log;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.constraints.*;
 import jakarta.ws.rs.*;
@@ -65,12 +67,22 @@ public class AdminResource {
     @Inject
     JsonWebToken jwt;
 
+    @Inject DataRetentionService dataRetentionService;
+
     // ── Role check — mirrors frontend hasSysAdminRole() ───────────────────────
     // Zitadel puts roles as object keys under:
     //   urn:zitadel:iam:org:project:roles → { "sys_admin": { orgId: domain } }
     // Quarkus @RolesAllowed reads realm_access.roles (Keycloak) and misses this.
     private static final String ROLE         = "sys_admin";
     private static final String ZITADEL_CLAIM = "urn:zitadel:iam:org:project:roles";
+
+    @GET
+    @Path("/retention/dry-run")
+    @RolesAllowed("admin")
+    public Response retentionDryRun() {
+        String result = dataRetentionService.dryRun();
+        return Response.ok(result).build();
+    }
 
     private boolean isSysAdmin() {
         // 1. Zitadel project roles (your setup)
