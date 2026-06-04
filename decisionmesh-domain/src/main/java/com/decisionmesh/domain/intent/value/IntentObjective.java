@@ -22,7 +22,20 @@ public record IntentObjective(
         String         description,
         String         taskType,
         List<String>   successCriteria,
-        String         context
+        String         context,
+
+        // ── User message (V2) ──────────────────────────────────────────────────
+        // The actual user input to process — e.g. the question to answer, the
+        // transaction to analyse, the document to summarise.
+        //
+        // Distinct from description (the task instruction) so adapters can
+        // structure the LLM call correctly:
+        //   system prompt  ← governance + task framing
+        //   user message   ← description (task) + userMessage (data to act on)
+        //
+        // When null, PromptBuilder falls back to description-only prompt.
+        // Backward-compatible: all existing intents without userMessage still work.
+        String         userMessage
 ) {
 
     // ── Compact constructor — defensive copy of list ──────────────────────────
@@ -31,6 +44,7 @@ public record IntentObjective(
         successCriteria = successCriteria != null
                 ? List.copyOf(successCriteria)
                 : List.of();
+        // userMessage is String — immutable, no defensive copy needed
     }
 
     // ── Original factory (backward-compatible) ────────────────────────────────
@@ -39,7 +53,7 @@ public record IntentObjective(
                                      double targetThreshold,
                                      double tolerance) {
         return new IntentObjective(type, targetThreshold, tolerance,
-                null, null, List.of(), null);
+                null, null, List.of(), null, null);
     }
 
     // ── Convenience factories ─────────────────────────────────────────────────
@@ -50,7 +64,7 @@ public record IntentObjective(
      */
     public static IntentObjective of(String description, ObjectiveType type) {
         return new IntentObjective(type, 0.0, 0.0,
-                description, null, List.of(), null);
+                description, null, List.of(), null, null);
     }
 
     /**
@@ -64,7 +78,7 @@ public record IntentObjective(
                                      List<String> successCriteria,
                                      String context) {
         return new IntentObjective(type, targetThreshold, tolerance,
-                description, taskType, successCriteria, context);
+                description, taskType, successCriteria, context, null);
     }
 
     // ── Getters for PromptBuilder ─────────────────────────────────────────────
@@ -102,5 +116,17 @@ public record IntentObjective(
      */
     public String getContext() {
         return context;
+    }
+
+    /**
+     * The actual user input to process — e.g. the question to answer,
+     * the transaction to analyse, the document to summarise.
+     *
+     * When present, PromptBuilder appends this as "Input:" after the
+     * task description so the LLM receives both the instruction AND
+     * the data to act on. Returns null if not set.
+     */
+    public String getUserMessage() {
+        return userMessage;
     }
 }

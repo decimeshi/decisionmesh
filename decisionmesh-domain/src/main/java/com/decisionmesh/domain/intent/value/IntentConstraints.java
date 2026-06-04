@@ -1,5 +1,6 @@
 package com.decisionmesh.domain.intent.value;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -53,7 +54,7 @@ public record IntentConstraints(
             @JsonProperty("requiredCompliance")  List<String> requiredCompliance,
             @JsonProperty("maxDriftThreshold")   double       maxDriftThreshold,
             @JsonProperty("maxExecutionWindow")  long         maxExecutionWindow,
-            @JsonProperty("maxLatency")          long         maxLatency) {
+            @JsonProperty("maxLatency") @JsonAlias("maxLatencyMs") long maxLatency) {
         return new IntentConstraints(
                 maxRetries, timeoutSeconds, maxTokens, region,
                 allowedAdapters, requiredCompliance,

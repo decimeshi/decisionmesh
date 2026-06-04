@@ -22,8 +22,8 @@ public final class Budget {
     // ── Constructor ──────────────────────────────────────────────────────────
 
     @JsonCreator
-    public Budget(@JsonProperty("amount")   double amount,
-                  @JsonProperty("spent")    double spent,
+    public Budget(@JsonProperty("amount")   @com.fasterxml.jackson.annotation.JsonAlias("ceilingUsd") double amount,
+                  @JsonProperty("spent")    @com.fasterxml.jackson.annotation.JsonAlias("spentUsd")   double spent,
                   @JsonProperty("currency") String currency) {
         this.amount   = amount;
         this.spent    = spent;

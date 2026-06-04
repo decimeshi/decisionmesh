@@ -106,7 +106,12 @@ public record IntentDetailResponse(
         if (conNode != null && !conNode.isNull()) {
             Integer maxRetries     = intOrNull(conNode.get("maxRetries"));
             Integer timeoutSeconds = intOrNull(conNode.get("timeoutSeconds"));
-            Integer maxLatencyMs   = intOrNull(conNode.get("maxLatencyMs"));
+            // DB stores as "maxLatency" (domain field name); payload sends as "maxLatencyMs".
+            // Handle both — prefer maxLatencyMs, fall back to maxLatency.
+            // Treat 0 as null (not set).
+            Integer maxLatencyMs   = intOrNullNonZero(
+                    conNode.has("maxLatencyMs") ? conNode.get("maxLatencyMs") : conNode.get("maxLatency")
+            );
             Double  maxDrift       = doubleOrNull(conNode.get("maxDriftThreshold"));
             if (maxRetries != null || timeoutSeconds != null
                     || maxLatencyMs != null || maxDrift != null) {
@@ -169,6 +174,13 @@ public record IntentDetailResponse(
         if (n == null || n.isNull()) return null;
         if (n.isNumber()) return n.intValue();
         try { return Integer.parseInt(n.asText()); } catch (Exception ex) { return null; }
+    }
+
+    /** Same as intOrNull but treats 0 as null — used for latency/window fields
+     *  where 0 means "not configured" rather than a real constraint. */
+    private static Integer intOrNullNonZero(JsonNode n) {
+        Integer v = intOrNull(n);
+        return (v != null && v == 0) ? null : v;
     }
 
     private static Double doubleOrNull(JsonNode n) {

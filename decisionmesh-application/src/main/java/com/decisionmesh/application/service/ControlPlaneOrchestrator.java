@@ -231,7 +231,7 @@ public class ControlPlaneOrchestrator {
                 })
 
                 // Execute
-                .flatMap(plan -> executeWithGovernanceAndRetry(intent, plan, lockToken, 1))
+                .flatMap(plan -> executeWithGovernanceAndRetry(intent, plan, lockToken, 1, eventLoopCtx))
 
                 // ── RETURN TO EVENT LOOP ──────────────────────────────────────
                 // executionEngine.execute() uses runSubscriptionOn(workerPool) for
@@ -352,7 +352,8 @@ public class ControlPlaneOrchestrator {
             Intent intent,
             Plan plan,
             LockToken lockToken,
-            int attemptNumber) {
+            int attemptNumber,
+            io.vertx.core.Context eventLoopCtx) {
 
         Log.debugf("Execution attempt %d/%d: intent=%s, plan=%s",
                 attemptNumber, intent.getMaxRetries(), intent.getId(), plan.getPlanId());
@@ -386,7 +387,7 @@ public class ControlPlaneOrchestrator {
                 .flatMap(record -> slaGuard.validateAfterExecution(intent, record).replaceWith(record))
 
                 .onFailure().recoverWithUni(ex ->
-                        handleExecutionFailure(intent, plan, lockToken, attemptNumber, ex));
+                        handleExecutionFailure(intent, plan, lockToken, attemptNumber, ex, eventLoopCtx));
     }
 
     private Uni<ExecutionRecord> handleExecutionFailure(
@@ -394,15 +395,28 @@ public class ControlPlaneOrchestrator {
             Plan plan,
             LockToken lockToken,
             int attemptNumber,
-            Throwable ex) {
+            Throwable ex,
+            io.vertx.core.Context eventLoopCtx) {
 
         Log.warnf(ex, "Execution attempt %d failed: intent=%s", attemptNumber, intent.getId());
+
+        // eventLoopCtx was captured at HTTP request start — it IS a duplicated context,
+        // safe for Hibernate Reactive @WithTransaction.
+        final java.util.concurrent.Executor eventLoopExec = runnable -> {
+            if (eventLoopCtx != null) {
+                eventLoopCtx.runOnContext(v -> runnable.run());
+            } else {
+                runnable.run();
+            }
+        };
 
         if (attemptNumber >= intent.getMaxRetries()) {
             Log.errorf("Retries exhausted (%d/%d): intent=%s",
                     attemptNumber, intent.getMaxRetries(), intent.getId());
             intent.markViolated();
-            return intentRepository.save(intent)
+            return Uni.createFrom().voidItem()
+                    .emitOn(eventLoopExec)
+                    .flatMap(v -> intentRepository.save(intent))
                     .flatMap(v -> drainEvents(intent))
                     .flatMap(v -> Uni.createFrom().failure(ex));
         }
@@ -410,29 +424,28 @@ public class ControlPlaneOrchestrator {
         intent.scheduleRetry();
         intent.resumeExecution();
 
-        // Debit 1 credit for the retry attempt.
-        // debitRetry uses @WithTransaction (Hibernate Reactive) which requires
-        // the Vert.x event loop. Switch context before calling it.
-        final io.vertx.core.Context vertxCtx = io.vertx.core.Vertx.currentContext();
-        final java.util.concurrent.Executor eventLoopExec = runnable -> {
-            if (vertxCtx != null) {
-                vertxCtx.runOnContext(v -> runnable.run());
-            } else {
-                runnable.run();
-            }
-        };
+        // Debit 1 credit — fire-and-forget, non-fatal.
+        // Must run on the duplicated event loop context for @WithTransaction.
+        // Schedule via runOnContext to guarantee the correct context.
+        if (eventLoopCtx != null) {
+            eventLoopCtx.runOnContext(v ->
+                    creditLedger.debitRetry(intent.getTenantId(), intent.getId(), 1)
+                            .onFailure().invoke(ce ->
+                                    Log.warnf("[Credits] Retry debit failed for intent=%s — non-fatal",
+                                            intent.getId()))
+                            .onFailure().recoverWithNull()
+                            .subscribe().with(
+                                    ok  -> Log.debugf("[Credits] Retry debit ok: intent=%s", intent.getId()),
+                                    err -> Log.warnf("[Credits] Retry debit error: intent=%s", intent.getId()))
+            );
+        }
 
         return Uni.createFrom().voidItem()
                 .emitOn(eventLoopExec)
-                .flatMap(v -> creditLedger.debitRetry(intent.getTenantId(), intent.getId(), 1)
-                        .onFailure().invoke(ce ->
-                                Log.warnf("[Credits] Retry debit failed for intent=%s — non-fatal",
-                                        intent.getId()))
-                        .onFailure().recoverWithNull())
                 .flatMap(v -> intentRepository.save(intent))
                 .flatMap(v -> drainEvents(intent))
                 .flatMap(v -> executeWithGovernanceAndRetry(
-                        intent, plan, lockToken, attemptNumber + 1));
+                        intent, plan, lockToken, attemptNumber + 1, eventLoopCtx));
     }
 
     // ─── Lock lifecycle ───────────────────────────────────────────────────────
@@ -579,13 +592,30 @@ public class ControlPlaneOrchestrator {
                                 Log.errorf(ex, "[Credits] Debit failed for intent=%s — non-fatal",
                                         intent.getId()))
                         .onFailure().recoverWithNull())
-                .invoke(v -> {
-                    if (executionRecord != null) {
-                        Log.debugf("[ExecRecord] Already saved for intent=%s — skipping duplicate",
-                                intent.getId());
+                // ── UPDATE QUALITY SCORE IN DB ────────────────────────
+                // ExecutionRecordRepository.persistBlocking() saves the record BEFORE
+                // quality scoring runs. Update the quality fields now via JDBC.
+                .flatMap(v -> {
+                    if (executionRecord != null && executionRecord.getQualityScore() != null) {
+                        Log.debugf("[Quality] Updating quality score for intent=%s score=%s",
+                                intent.getId(), executionRecord.getQualityScore());
+                        return executionRecordRepository.updateQualityScore(
+                                        executionRecord.getExecutionId(),
+                                        intent.getTenantId(),
+                                        executionRecord.getQualityScore(),
+                                        executionRecord.getHallucinationRisk(),
+                                        Boolean.TRUE.equals(executionRecord.getHallucinationDetected()),
+                                        executionRecord.getQualityReasoning())
+                                .onFailure().invoke(qex ->
+                                        Log.warnf(qex, "[Quality] Failed to update quality score for intent=%s — non-fatal",
+                                                intent.getId()))
+                                .onFailure().recoverWithNull()
+                                .replaceWithVoid();
                     }
-                })
-                .replaceWithVoid();
+                    Log.debugf("[Quality] No quality score to update for intent=%s (record=%s)",
+                            intent.getId(), executionRecord != null ? "present but unscored" : "null");
+                    return Uni.createFrom().voidItem();
+                });
     }
 
     /**

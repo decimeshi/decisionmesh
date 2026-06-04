@@ -117,12 +117,30 @@ public final class PromptBuilder {
 
     private static String buildUserPrompt(IntentObjective objective) {
         String description = objective.getDescription();
+        String userMessage = objective.getUserMessage();
         String context     = objective.getContext();
 
-        if (context != null && !context.isBlank()) {
-            return "Context:\n" + context + "\n\nRequest:\n" + description;
+        // ── Prompt structure ──────────────────────────────────────────────────
+        // Task (description)  — what the AI must do
+        // Input (userMessage) — the data to act on (question, transaction, doc)
+        // Context             — background context when userMessage is absent
+        //
+        // Without userMessage, the LLM only sees the meta-instruction and
+        // responds with "please provide the data" — useless output.
+
+        StringBuilder sb = new StringBuilder();
+
+        if (description != null && !description.isBlank()) {
+            sb.append("Task: ").append(description).append("\n\n");
         }
-        return description;
+
+        if (userMessage != null && !userMessage.isBlank()) {
+            sb.append("Input:\n").append(userMessage).append("\n\n");
+        } else if (context != null && !context.isBlank()) {
+            sb.append("Context:\n").append(context).append("\n\n");
+        }
+
+        return sb.toString().trim();
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

@@ -63,6 +63,10 @@ public class LlmExecutionEngine implements ExecutionEngine {
     @ConfigProperty(name = "llm.registry.fail-fast-on-empty", defaultValue = "false")
     boolean failFastOnEmptyRegistry;
 
+    /** Set to false in local/dev to force real LLM calls — disables response cache. */
+    @ConfigProperty(name = "llm.response-cache.enabled", defaultValue = "true")
+    boolean responseCacheEnabled;
+
     private static final String RESPONSE_CACHE_PREFIX = "llm:resp:";
     private static final Duration RESPONSE_CACHE_TTL  = Duration.ofHours(1);
 
@@ -134,8 +138,25 @@ public class LlmExecutionEngine implements ExecutionEngine {
 
     private String buildRespCacheKey(Intent intent) {
         try {
+            // ── Cache key includes userMessage so different inputs don't collide ──
+            // Previously only used description — identical intent types with different
+            // userMessages (e.g. different transactions) returned the same cached response.
+            String userMsg = "";
+            if (intent.getObjective() != null) {
+                try {
+                    Object obj = intent.getObjective();
+                    if (obj instanceof java.util.Map<?, ?> map && map.get("userMessage") != null) {
+                        userMsg = map.get("userMessage").toString();
+                    } else {
+                        java.lang.reflect.Method m = obj.getClass().getMethod("getUserMessage");
+                        Object um = m.invoke(obj);
+                        if (um != null) userMsg = um.toString();
+                    }
+                } catch (Exception ignored) {}
+            }
             String raw = intent.getTenantId() + ":" + intent.getIntentType() + ":"
                     + (intent.getObjective() != null ? intent.getObjective().getDescription() : "")
+                    + ":" + userMsg
                     + ":" + (intent.getConstraints() != null ? intent.getConstraints().toString() : "");
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
@@ -151,6 +172,13 @@ public class LlmExecutionEngine implements ExecutionEngine {
                                                   List<AdapterStats> candidates,
                                                   int attemptNumber) {
         String cacheKey = buildRespCacheKey(intent);
+        // ── Response cache disabled (llm.response-cache.enabled=false) ────────
+        // Skip cache entirely — forces real LLM call on every submission.
+        // Set in application-local.properties for dev/test environments.
+        if (!responseCacheEnabled) {
+            Log.debugf("[RespCache] DISABLED — skipping cache for intent=%s", intent.getId());
+            return doSelect(intent, plan, candidates, attemptNumber, cacheKey);
+        }
         if (attemptNumber == 1) {
             return responseCache.get(cacheKey)
                     .flatMap(cached -> {
@@ -160,7 +188,7 @@ public class LlmExecutionEngine implements ExecutionEngine {
                                     "tenant", safeId(intent.getTenantId())).increment();
                             return Uni.createFrom().item(ExecutionRecord.of(
                                     intent.getId(), attemptNumber, "cache",
-                                    0L, BigDecimal.ZERO, null, null
+                                    1L, BigDecimal.ZERO, null, null
                             ).withResponseText(cached));
                         }
                         meterRegistry.counter("llm.response_cache.miss",

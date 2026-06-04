@@ -300,30 +300,58 @@ public class AnthropicAdapter implements LlmAdapter, CacheableAdapter {
      *   maxRetries() not getMaxRetries()
      */
     private String buildUserPrompt(Intent intent, PlanStep step) {
-        return """
-                Execute the following intent and return a JSON response:
+        // ── Extract objective description and optional userMessage ─────────────
+        // The intent payload may contain:
+        //   objective.description  — what the AI should do (system-level instruction)
+        //   objective.userMessage  — the actual user input to process (e.g. a question,
+        //                           a transaction to analyse, a document to summarise)
+        //
+        // If userMessage is present, it is appended as the primary content so the
+        // LLM receives both the task instruction AND the data to act on.
+        // Without userMessage, the LLM only sees the meta-instruction and responds
+        // with "please provide the data" — which is the bug this fixes.
 
-                Objective: %s
+        String description = "No objective specified";
+        String userMessage = null;
 
-                Budget ceiling: %s USD
-                Max latency:    %s ms
-                Max retries:    %s
+        if (intent.getObjective() != null) {
+            Object obj = intent.getObjective();
+            if (obj instanceof java.util.Map<?, ?> map) {
+                Object desc = map.get("description");
+                if (desc != null && !desc.toString().isBlank()) {
+                    description = desc.toString();
+                }
+                Object um = map.get("userMessage");
+                if (um != null && !um.toString().isBlank()) {
+                    userMessage = um.toString();
+                }
+            } else {
+                // Fallback: use toString() if Objective is a typed class
+                description = obj.toString();
+            }
+        }
 
-                Respond with valid JSON only.
-                """.formatted(
-                intent.getObjective() != null
-                        ? intent.getObjective().getDescription()
-                        : "No objective specified",
-                intent.getBudget() != null
-                        ? intent.getBudget().getCeilingUsd()
-                        : "unlimited",
-                intent.getConstraints() != null
-                        ? intent.getConstraints().maxLatency()   // ← record accessor
-                        : "5000",
-                intent.getConstraints() != null
-                        ? intent.getConstraints().maxRetries()   // ← record accessor
-                        : "3"
-        );
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Execute the following intent:\n\n");
+        prompt.append("Task: ").append(description).append("\n\n");
+
+        if (userMessage != null) {
+            prompt.append("Input to process:\n").append(userMessage).append("\n\n");
+        }
+
+        prompt.append("Constraints:\n");
+        prompt.append("  Budget ceiling: ").append(
+                intent.getBudget() != null ? intent.getBudget().getCeilingUsd() : "unlimited"
+        ).append(" USD\n");
+        prompt.append("  Max latency: ").append(
+                intent.getConstraints() != null ? intent.getConstraints().maxLatency() : "5000"
+        ).append(" ms\n");
+        prompt.append("  Max retries: ").append(
+                intent.getConstraints() != null ? intent.getConstraints().maxRetries() : "3"
+        ).append("\n\n");
+        prompt.append("Respond with valid JSON only.");
+
+        return prompt.toString();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
