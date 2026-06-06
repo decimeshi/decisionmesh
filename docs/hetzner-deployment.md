@@ -6,7 +6,7 @@
 - Logged into GitHub Container Registry:
 
 ```powershell
-docker login ghcr.io -u thirupala -p YOUR_GITHUB_TOKEN
+docker login ghcr.io -u decimeshi -p YOUR_GITHUB_TOKEN
 ```
 
 > Generate token at `https://github.com/settings/tokens/new`
@@ -32,12 +32,12 @@ mvn clean package -DskipTests
 
 **3. Build Docker image:**
 ```powershell
-docker build -t ghcr.io/thirupala/decisionmesh:staging .
+docker build -t ghcr.io/decimeshi/decisionmesh:staging .
 ```
 
 **4. Push to GitHub Container Registry:**
 ```powershell
-docker push ghcr.io/thirupala/decisionmesh:staging
+docker push ghcr.io/decimeshi/decisionmesh:staging
 ```
 
 ---
@@ -52,7 +52,7 @@ ssh decisionmesh@178.105.87.59
 **6. Pull new image:**
 ```bash
 cd /opt/decisionmesh/infra
-docker pull ghcr.io/thirupala/decisionmesh:staging
+docker pull ghcr.io/decimeshi/decisionmesh:staging
 ```
 
 **7. Restart API container only:**
@@ -95,12 +95,12 @@ mvn clean package -DskipTests
 
 **3. Build Docker image:**
 ```powershell
-docker build -t ghcr.io/thirupala/decisionmesh:latest .
+docker build -t ghcr.io/decimeshi/decisionmesh:latest .
 ```
 
 **4. Push to GitHub Container Registry:**
 ```powershell
-docker push ghcr.io/thirupala/decisionmesh:latest
+docker push ghcr.io/decimeshi/decisionmesh:latest
 ```
 
 ---
@@ -115,7 +115,7 @@ ssh decisionmesh@178.105.87.59
 **6. Pull new image:**
 ```bash
 cd /opt/decisionmesh/infra
-docker pull ghcr.io/thirupala/decisionmesh:latest
+docker pull ghcr.io/decimeshi/decisionmesh:latest
 ```
 
 **7. Restart API container only:**
@@ -249,7 +249,7 @@ docker stats dm-api-staging dm-api --no-stream
 |---|---|---|
 | **API URL** | `https://api-staging.decimeshi.com` | `https://api.decimeshi.com` |
 | **Frontend URL** | `https://app-staging.decimeshi.com` | `https://decimeshi.com` |
-| **Docker image** | `ghcr.io/thirupala/decisionmesh:staging` | `ghcr.io/thirupala/decisionmesh:latest` |
+| **Docker image** | `ghcr.io/decimeshi/decisionmesh:staging` | `ghcr.io/decimeshi/decisionmesh:latest` |
 | **API container** | `dm-api-staging` | `dm-api` |
 | **Port** | `8081` | `8080` |
 | **OpenBao mode** | Dev (auto-unseal) | Server (manual unseal) |
