@@ -96,7 +96,7 @@ jobs:
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
           token: ${{ secrets.INFRA_DISPATCH_TOKEN }}
-          repository: thirupala/decisionmesh-infra
+          repository: decimeshi/decisionmesh-infra
           event-type: deploy-staging
           client-payload: '{"sha": "${{ github.sha }}"}'
 
@@ -105,6 +105,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v3.0.0
         with:
           token: ${{ secrets.INFRA_DISPATCH_TOKEN }}
-          repository: thirupala/decisionmesh-infra
+          repository: decimeshi/decisionmesh-infra
           event-type: deploy-prod
           client-payload: '{"sha": "${{ github.sha }}"}'
