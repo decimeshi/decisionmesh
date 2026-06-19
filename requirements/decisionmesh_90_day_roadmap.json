@@ -1,0 +1,67 @@
+{
+  "program": "DecisionMesh AI Control Plane",
+  "durationDays": 90,
+  "phases": [
+    {
+      "phase": "Days 1-30 Foundation",
+      "tasks": [
+        "Define DecisionMesh Governance Specification (DGS)",
+        "Design global control schema",
+        "Design policy engine schema",
+        "Design audit event schema",
+        "Design observability schema",
+        "Create intent template framework",
+        "Create fraud control pack",
+        "Create AML control pack",
+        "Create KYC control pack",
+        "Create payments control pack",
+        "Create synthetic test data framework",
+        "Create evaluation framework",
+        "Create model registry integration",
+        "Implement policy versioning",
+        "Implement prompt versioning",
+        "Implement decision trace schema"
+      ]
+    },
+    {
+      "phase": "Days 31-60 Core Platform",
+      "tasks": [
+        "Build policy evaluation engine",
+        "Build intent execution engine",
+        "Build audit engine",
+        "Build human review workflows",
+        "Build model routing engine",
+        "Build cost governance module",
+        "Build latency governance module",
+        "Build compliance governance module",
+        "Implement RBI compliance pack",
+        "Implement PMLA compliance pack",
+        "Implement DPDPA compliance pack",
+        "Implement evaluation pipelines",
+        "Create fintech v2 intent catalog",
+        "Create fraud reference implementation",
+        "Create lending reference implementation"
+      ]
+    },
+    {
+      "phase": "Days 61-90 Enterprise Readiness",
+      "tasks": [
+        "Build agent governance framework",
+        "Build multi-agent orchestration controls",
+        "Build approval workflows",
+        "Build regulatory reporting engine",
+        "Build executive dashboards",
+        "Build governance dashboards",
+        "Build tenant management",
+        "Build policy marketplace",
+        "Build control pack marketplace",
+        "Build onboarding wizard",
+        "Create banking demo",
+        "Create NBFC demo",
+        "Create insurance demo",
+        "Perform security review",
+        "Perform production readiness review"
+      ]
+    }
+  ]
+}
