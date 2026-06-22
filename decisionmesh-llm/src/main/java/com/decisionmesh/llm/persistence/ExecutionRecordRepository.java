@@ -72,6 +72,13 @@ public class ExecutionRecordRepository implements ExecutionRecordQueryPort {
                 '{}'::jsonb,
                 now()
             )
+            ON CONFLICT (id) DO UPDATE SET
+                status         = EXCLUDED.status,
+                latency_ms     = EXCLUDED.latency_ms,
+                cost_usd       = EXCLUDED.cost_usd,
+                failure_reason = EXCLUDED.failure_reason,
+                response_text  = COALESCE(EXCLUDED.response_text, execution_records.response_text),
+                executed_at    = EXCLUDED.executed_at
             """;
 
     private static final String INSERT_SPEND = """
