@@ -715,19 +715,8 @@ public class ControlPlaneOrchestrator {
      * Checked after quality scoring, before markSatisfied().
      */
     private boolean requiresHumanReview(Intent intent) {
-        try {
-            com.fasterxml.jackson.databind.JsonNode root =
-                    MAPPER.readTree(intent.toJson(MAPPER));
-            // requireHumanReview is stored under constraints (not policy)
-            com.fasterxml.jackson.databind.JsonNode constraints = root.path("constraints");
-            if (!constraints.isMissingNode()) {
-                return constraints.path("requireHumanReview").asBoolean(false);
-            }
-        } catch (Exception ex) {
-            Log.debugf("[ReviewQueue] Could not parse requireHumanReview for intent=%s: %s",
-                    intent.getId(), ex.getMessage());
-        }
-        return false;
+        return intent.getConstraints() != null
+                && intent.getConstraints().requireHumanReview();
     }
 
 
