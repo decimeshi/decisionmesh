@@ -25,6 +25,7 @@ public record IntentConstraints(
         List<String> allowedAdapters,     // explicit adapter ID allowlist (empty = all)
         List<String> requiredCompliance,  // compliance frameworks e.g. ["HIPAA", "SOC2"]
         double       maxDriftThreshold,   // max acceptable drift score 0..1 (0 = no limit)
+        boolean requireHumanReview,
         long         maxExecutionWindow,  // max wall-clock ms for entire intent (0 = no limit)
         long         maxLatency           // max acceptable adapter latency in ms (0 = no limit)
 ) {
@@ -53,12 +54,13 @@ public record IntentConstraints(
             @JsonProperty("allowedAdapters")     List<String> allowedAdapters,
             @JsonProperty("requiredCompliance")  List<String> requiredCompliance,
             @JsonProperty("maxDriftThreshold")   double       maxDriftThreshold,
+            @JsonProperty("requireHumanReview")   boolean     requireHumanReview,
             @JsonProperty("maxExecutionWindow")  long         maxExecutionWindow,
             @JsonProperty("maxLatency") @JsonAlias("maxLatencyMs") long maxLatency) {
         return new IntentConstraints(
                 maxRetries, timeoutSeconds, maxTokens, region,
                 allowedAdapters, requiredCompliance,
-                maxDriftThreshold, maxExecutionWindow, maxLatency
+                maxDriftThreshold, requireHumanReview ,maxExecutionWindow, maxLatency
         );
     }
 
@@ -67,12 +69,12 @@ public record IntentConstraints(
     /** Minimal — just retry and timeout, everything else defaulted. */
     public static IntentConstraints of(int maxRetries, int timeoutSeconds) {
         return new IntentConstraints(maxRetries, timeoutSeconds, 0,
-                null, List.of(), List.of(), 0.0, 0L, 0L);
+                null, List.of(), List.of(), 0.0, false,0L, 0L);
     }
 
     /** No constraints — useful for tests. */
     public static IntentConstraints none() {
-        return new IntentConstraints(3, 30, 0, null, List.of(), List.of(), 0.0, 0L, 0L);
+        return new IntentConstraints(3, 30, 0, null, List.of(), List.of(), 0.0, false,0L, 0L);
     }
 
     // ── Semantic helpers ──────────────────────────────────────────────────────

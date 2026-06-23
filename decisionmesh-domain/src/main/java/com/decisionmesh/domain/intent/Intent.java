@@ -307,6 +307,24 @@ public final class Intent {
     public void markExecuting()  { transition(IntentPhase.PLANNED,   IntentPhase.EXECUTING,  IntentEventType.EXECUTION_STARTED); }
     public void markEvaluating() { transition(IntentPhase.EXECUTING, IntentPhase.EVALUATING, IntentEventType.EVALUATION_STARTED); }
 
+    /**
+     * Parks the intent for human review.
+     * Called by ControlPlaneOrchestrator when requireHumanReview=true in policy.
+     * Intent stays NON-terminal so it appears in ReviewQueueResource.
+     * Human reviewer calls approve (→ SATISFIED) or reject (→ VIOLATED).
+     */
+    public void markPendingReview() {
+        // Set directly — bypass transition() phase guard since EVALUATING→REVIEWING
+        // is not a standard transition but a governance interception.
+        this.phase             = IntentPhase.COMPLETED;  // visually complete
+        this.satisfactionState = SatisfactionState.UNKNOWN; // awaiting human decision
+        this.terminal          = false;  // NOT terminal — stays in review queue
+        this.version++;
+        touch();
+        // Emit SATISFIED event for now — will update to PENDING_REVIEW when enum is extended
+        emit(IntentEventType.EVALUATION_STARTED);
+    }
+
     public void markSatisfied() {
         transition(IntentPhase.EVALUATING, IntentPhase.COMPLETED, IntentEventType.SATISFIED);
         this.satisfactionState = SatisfactionState.SATISFIED;

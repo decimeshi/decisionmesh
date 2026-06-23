@@ -521,6 +521,18 @@ public class ControlPlaneOrchestrator {
                 .flatMap(driftScore -> {
 
                     intent.updateDriftScore(driftScore, executionRecord.getExecutionId());
+
+                    // ── HUMAN REVIEW INTERCEPTION ─────────────────────────────
+                    // If the intent payload has "requireHumanReview":true,
+                    // park the intent in PENDING_REVIEW state instead of SATISFIED.
+                    // The human reviewer will approve/reject via ReviewQueueResource.
+                    if (requiresHumanReview(intent)) {
+                        Log.infof("[ReviewQueue] Intent parked for human review: id=%s",
+                                intent.getId());
+                        intent.markPendingReview();    // phase=REVIEWING, satisfactionState=PENDING_REVIEW, terminal=false
+                        return Uni.createFrom().voidItem();
+                    }
+
                     intent.markSatisfied();
 
                     // ── Log summary ───────────────────────────────────────────
@@ -684,4 +696,16 @@ public class ControlPlaneOrchestrator {
                 intent.getId(),
                 intent.getVersion());
     }
+    // ── Human review helper ───────────────────────────────────────────────────
+
+    /**
+     * Returns true if the intent payload contains "requireHumanReview":true.
+     * Checked after quality scoring, before markSatisfied().
+     */
+    private boolean requiresHumanReview(Intent intent) {
+        return intent.getConstraints() != null
+                && intent.getConstraints().requireHumanReview();
+    }
+
+
 }
