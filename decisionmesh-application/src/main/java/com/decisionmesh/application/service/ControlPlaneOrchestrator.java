@@ -21,6 +21,7 @@ import com.decisionmesh.billing.service.CreditLedgerService;
 import com.decisionmesh.application.port.OutboxPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.decisionmesh.domain.plan.Plan;
+import com.decisionmesh.governance.service.LedgerAppendService;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -81,6 +82,7 @@ public class ControlPlaneOrchestrator {
     @Inject PromptInjectionGuardService injectionGuard;   // decisionmesh-security
     @Inject OutputQualityScorerService  qualityScorer;    // decisionmesh-intelligence
     @Inject CreditLedgerService         creditLedger;     // decisionmesh-billing
+    @Inject LedgerAppendService         ledgerAppend;     // decisionmesh-governance
     @Inject DriftEvaluatorService       driftEvaluator;   // decisionmesh-intelligence
     @Inject OutboxPort                   outboxPort;       // transactional outbox — impl in decisionmesh-streaming
 
@@ -192,6 +194,11 @@ public class ControlPlaneOrchestrator {
 
         return policyEngine.evaluatePreSubmission(intent)
                 .invoke(this::assertPolicyAllowed)
+                .flatMap(decision -> ledgerAppend.appendDecision(
+                        intent.getId(),
+                        intent.getTenantId().toString(),
+                        "PRE_SUBMISSION_POLICY",
+                        null, null, null).replaceWith(decision))
 
                 // Budget validation
                 .flatMap(v -> budgetGuard.validateBudget(intent))
@@ -260,6 +267,11 @@ public class ControlPlaneOrchestrator {
                 .flatMap(record ->
                         policyEngine.evaluatePostExecution(intent, record)
                                 .invoke(this::assertPolicyAllowed)
+                                .flatMap(decision -> ledgerAppend.appendDecision(
+                                        intent.getId(),
+                                        intent.getTenantId().toString(),
+                                        "POST_EXECUTION_POLICY",
+                                        null, null, null).replaceWith(decision))
                                 .replaceWith(record))
 
                 // ── SATISFIED | VIOLATED (with async drift) ───────────────────
@@ -703,8 +715,19 @@ public class ControlPlaneOrchestrator {
      * Checked after quality scoring, before markSatisfied().
      */
     private boolean requiresHumanReview(Intent intent) {
-        return intent.getConstraints() != null
-                && intent.getConstraints().requireHumanReview();
+        try {
+            com.fasterxml.jackson.databind.JsonNode root =
+                    MAPPER.readTree(intent.toJson(MAPPER));
+            // requireHumanReview is stored under constraints (not policy)
+            com.fasterxml.jackson.databind.JsonNode constraints = root.path("constraints");
+            if (!constraints.isMissingNode()) {
+                return constraints.path("requireHumanReview").asBoolean(false);
+            }
+        } catch (Exception ex) {
+            Log.debugf("[ReviewQueue] Could not parse requireHumanReview for intent=%s: %s",
+                    intent.getId(), ex.getMessage());
+        }
+        return false;
     }
 
 

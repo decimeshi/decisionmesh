@@ -108,6 +108,11 @@ public class IntentLibraryBootstrap {
                     entity.tags = tags;
                     entity.isActive      = true;
 
+                    // Read examplePayload if present in JSON
+                    if (intentNode.has("examplePayload") && !intentNode.get("examplePayload").isNull()) {
+                        entity.examplePayload = intentNode.get("examplePayload");
+                    }
+
                     toInsert.add(entity);
                 }
             }
@@ -140,7 +145,17 @@ public class IntentLibraryBootstrap {
         return repo.findByNameAndCategory(entity.name, entity.category)
                 .flatMap(existing -> {
                     if (existing != null) {
-                        return Uni.createFrom().item(false);   // already present — skip
+                        // Always update examplePayload if provided in JSON
+                        if (entity.examplePayload != null) {
+                            existing.examplePayload = entity.examplePayload;
+                            return repo.persist(existing)
+                                    .map(saved -> {
+                                        Log.debugf("[Bootstrap] Updated payload [%s] %s",
+                                                entity.category, entity.name);
+                                        return false; // not a new insert
+                                    });
+                        }
+                        return Uni.createFrom().item(false);   // skip — no payload to update
                     }
                     return repo.persist(entity)
                             .map(saved -> {

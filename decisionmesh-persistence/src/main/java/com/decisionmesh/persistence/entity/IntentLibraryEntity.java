@@ -9,7 +9,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.UUID;
 
 @Entity
@@ -56,6 +56,10 @@ public class IntentLibraryEntity extends PanacheEntityBase {
 
     @Column(name = "is_active", nullable = false)
     public Boolean isActive = true;
+
+    @Column(name = "example_payload", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    public JsonNode examplePayload;
 
     @Column(name = "created_at", updatable = false, insertable = false)
     public OffsetDateTime createdAt;

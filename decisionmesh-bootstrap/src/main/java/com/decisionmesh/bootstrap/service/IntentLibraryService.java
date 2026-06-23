@@ -31,7 +31,8 @@ public class IntentLibraryService {
         return repo.getSession().flatMap(session ->
                 session.createNativeQuery("""
             SELECT category, category_label,
-                   COUNT(*), MAX(risk_level), MIN(regulatory_ref)
+                   CAST(COUNT(*) AS INTEGER) AS cnt,
+                   MAX(risk_level), MIN(regulatory_ref)
             FROM intent_library
             WHERE vertical = :v AND is_active = true
             GROUP BY category, category_label
@@ -40,12 +41,18 @@ public class IntentLibraryService {
                         .getResultList()
         ).map(rows -> rows.stream().map(row -> {
             Object[] r = (Object[]) row;
+            // COUNT(*) may return BigInteger, Long, or Integer depending on driver
+            int count = 0;
+            if (r[2] != null) {
+                try { count = ((Number) r[2]).intValue(); }
+                catch (Exception e) { count = Integer.parseInt(r[2].toString()); }
+            }
             return new CategoryResponse(
-                    (String) r[0],                          // category
-                    (String) r[1],                          // categoryLabel
-                    Integer.parseInt(r[2].toString()),      // count — driver returns String
-                    (String) r[3],                          // maxRiskLevel
-                    (String) r[4]                           // regulatoryRef
+                    (String) r[0],   // category
+                    (String) r[1],   // categoryLabel
+                    count,           // count — safely cast
+                    (String) r[3],   // maxRiskLevel
+                    (String) r[4]    // regulatoryRef
             );
         }).toList());
     }
