@@ -1,8 +1,11 @@
 package com.decisionmesh.bootstrap.resource;
 
+import com.decisionmesh.bootstrap.service.AuditService;
 import com.decisionmesh.contracts.security.context.TenantContext;
 import com.decisionmesh.persistence.entity.IntentEntity;
 import com.decisionmesh.persistence.repository.IntentRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
@@ -14,69 +17,88 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * Human Review Queue — GET pending decisions, POST approve/reject.
+ * Human Review Queue.
  *
- * Intents appear here when their policy has requireHumanReview=true
- * and they are not yet terminal.
+ * Shows ALL intents that have "requireHumanReview":true in their payload.
+ * - Non-terminal intents → PENDING (awaiting review)
+ * - Terminal intents     → APPROVED or REJECTED (already reviewed)
  *
- * Approve → phase=COMPLETED, satisfactionState=SATISFIED
- * Reject  → phase=COMPLETED, satisfactionState=VIOLATED
+ * Approve → satisfactionState=SATISFIED
+ * Reject  → satisfactionState=VIOLATED
  */
 @Path("/api/review-queue")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ReviewQueueResource {
 
+    // ── Audit action constants ────────────────────────────────────────────────
+    public static final String ACTION_INTENT_APPROVED = "INTENT_APPROVED";
+    public static final String ACTION_INTENT_REJECTED = "INTENT_REJECTED";
+
     @Inject IntentRepository intentRepository;
+    @Inject AuditService     auditService;
     @Inject TenantContext    tenantContext;
     @Inject JsonWebToken     jwt;
 
     // ── GET /api/review-queue ─────────────────────────────────────────────────
     @GET
+    @WithSession
     public Uni<List<ReviewItem>> list(
             @QueryParam("page") @DefaultValue("0")  int page,
-            @QueryParam("size") @DefaultValue("20") int size) {
+            @QueryParam("size") @DefaultValue("50") int size) {
 
         UUID tenantId = tenantId();
-        Log.debugf("[ReviewQueue] list: tenant=%s page=%d size=%d", tenantId, page, size);
+        Log.debugf("[ReviewQueue] list: tenant=%s", tenantId);
 
+        // Fetch recent intents — filter those with requireHumanReview flag
         return intentRepository.findPageByTenant(
-                tenantId, null, "createdAt", "desc", page, size)
-            .map(entities -> entities.stream()
-                .filter(this::requiresReview)
-                .map(this::toReviewItem)
-                .toList());
+                        tenantId, null, "createdAt", "desc", page, size)
+                .map(entities -> entities.stream()
+                        .filter(this::hasReviewFlag)
+                        .map(this::toReviewItem)
+                        .toList());
     }
 
     // ── POST /api/review-queue/{id}/approve ──────────────────────────────────
     @POST
     @Path("/{intentId}/approve")
+    @WithTransaction
     public Uni<ReviewResult> approve(@PathParam("intentId") UUID intentId,
                                      ReviewAction body) {
         UUID   tenantId = tenantId();
         String reviewer = reviewerId();
         String note     = body != null && body.note != null ? body.note : "";
 
-        Log.infof("[ReviewQueue] APPROVE: intent=%s tenant=%s reviewer=%s",
-                intentId, tenantId, reviewer);
+        Log.infof("[ReviewQueue] APPROVE: intent=%s reviewer=%s", intentId, reviewer);
 
         return intentRepository.findByIdAndTenant(intentId, tenantId)
-            .onItem().ifNull().failWith(() ->
-                new NotFoundException("Intent not found: " + intentId))
-            .flatMap(entity -> {
-                entity.phase             = "COMPLETED";
-                entity.satisfactionState = "SATISFIED";
-                entity.terminal          = true;
-                return intentRepository.persist(entity);
-            })
-            .map(v -> new ReviewResult(
-                intentId.toString(), "APPROVED", reviewer, note,
-                Instant.now().toString(), "Decision approved — audit trail updated"));
+                .onItem().ifNull().failWith(() ->
+                        new NotFoundException("Intent not found: " + intentId))
+                .flatMap(entity -> {
+                    entity.satisfactionState = "SATISFIED";
+                    entity.phase             = "COMPLETED";
+                    entity.terminal          = true;
+                    return intentRepository.persist(entity);
+                })
+                .flatMap(v -> auditService.log(
+                        tenantId, reviewer,
+                        ACTION_INTENT_APPROVED,
+                        "INTENT", intentId,
+                        "INTENT", intentId.toString(),
+                        "SUCCESS",
+                        note != null && !note.isBlank()
+                                ? "Human approved. Note: " + note
+                                : "Human approved via Review Queue"
+                ))
+                .map(v -> new ReviewResult(
+                        intentId.toString(), "APPROVED", reviewer, note,
+                        Instant.now().toString(), "Decision approved — audit trail updated"));
     }
 
     // ── POST /api/review-queue/{id}/reject ───────────────────────────────────
     @POST
     @Path("/{intentId}/reject")
+    @WithTransaction
     public Uni<ReviewResult> reject(@PathParam("intentId") UUID intentId,
                                     ReviewAction body) {
         UUID   tenantId = tenantId();
@@ -86,63 +108,87 @@ public class ReviewQueueResource {
         if (note.isBlank())
             throw new BadRequestException("Rejection reason is required");
 
-        Log.infof("[ReviewQueue] REJECT: intent=%s tenant=%s reviewer=%s note=%s",
-                intentId, tenantId, reviewer, note);
+        Log.infof("[ReviewQueue] REJECT: intent=%s reviewer=%s note=%s",
+                intentId, reviewer, note);
 
         return intentRepository.findByIdAndTenant(intentId, tenantId)
-            .onItem().ifNull().failWith(() ->
-                new NotFoundException("Intent not found: " + intentId))
-            .flatMap(entity -> {
-                entity.phase             = "COMPLETED";
-                entity.satisfactionState = "VIOLATED";
-                entity.terminal          = true;
-                return intentRepository.persist(entity);
-            })
-            .map(v -> new ReviewResult(
-                intentId.toString(), "REJECTED", reviewer, note,
-                Instant.now().toString(), "Decision rejected — " + note));
+                .onItem().ifNull().failWith(() ->
+                        new NotFoundException("Intent not found: " + intentId))
+                .flatMap(entity -> {
+                    entity.satisfactionState = "VIOLATED";
+                    entity.phase             = "COMPLETED";
+                    entity.terminal          = true;
+                    return intentRepository.persist(entity);
+                })
+                .flatMap(v -> auditService.log(
+                        tenantId, reviewer,
+                        ACTION_INTENT_REJECTED,
+                        "INTENT", intentId,
+                        "INTENT", intentId.toString(),
+                        "SUCCESS",
+                        "Human rejected. Reason: " + note
+                ))
+                .map(v -> new ReviewResult(
+                        intentId.toString(), "REJECTED", reviewer, note,
+                        Instant.now().toString(), "Decision rejected — " + note));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private boolean requiresReview(IntentEntity e) {
-        if (e == null || e.terminal) return false;
-        // Check payload JSON for requireHumanReview flag
-        if (e.payload != null && e.payload.contains("\"requireHumanReview\":true")) {
-            return true;
+    /**
+     * Returns true if intent needs human review and has NOT yet been reviewed.
+     * Excludes terminal intents (already approved or rejected).
+     */
+    private boolean hasReviewFlag(IntentEntity e) {
+        if (e == null || e.payload == null) return false;
+        // Must have requireHumanReview flag
+        boolean hasFlag = e.payload.contains("\"requireHumanReview\":true")
+                || e.payload.contains("\"requireHumanReview\": true");
+        if (!hasFlag) return false;
+        // Exclude already reviewed — terminal SATISFIED = approved, terminal VIOLATED = rejected
+        if (e.terminal && ("SATISFIED".equals(e.satisfactionState)
+                || "VIOLATED".equals(e.satisfactionState))) {
+            return false;
         }
-        // Also show PENDING_REVIEW satisfaction state
-        return "PENDING_REVIEW".equals(e.satisfactionState)
-            || "REQUIRES_REVIEW".equals(e.satisfactionState);
+        return true;
+    }
+
+    /** Maps reviewStatus based on satisfactionState */
+    private String reviewStatus(IntentEntity e) {
+        if (!e.terminal) return "PENDING";
+        return switch (e.satisfactionState != null ? e.satisfactionState : "") {
+            case "SATISFIED" -> "APPROVED";
+            case "VIOLATED"  -> "REJECTED";
+            default          -> "PENDING";
+        };
     }
 
     private ReviewItem toReviewItem(IntentEntity e) {
-        // Extract AI recommendation from payload if stored
-        String rec       = extractFromPayload(e.payload, "\"recommendation\":\"", "\"");
-        String reasoning = extractFromPayload(e.payload, "\"reasoning\":\"", "\"");
-        String riskStr   = extractFromPayload(e.payload, "\"riskScore\":", ",");
+        String rec       = extractJson(e.payload, "\"recommendation\":\"", "\"");
+        String reasoning = extractJson(e.payload, "\"reasoning\":\"", "\"");
         Double risk      = null;
+        String riskStr   = extractJson(e.payload, "\"riskScore\":", ",");
+        if (riskStr == null) riskStr = extractJson(e.payload, "\"riskScore\":", "}");
         if (riskStr != null) {
             try { risk = Double.parseDouble(riskStr.trim()); } catch (Exception ignored) {}
         }
 
         return new ReviewItem(
-            e.id != null ? e.id.toString() : null,
-            e.id != null ? e.id.toString() : null,
-            e.intentType,
-            e.phase,
-            e.satisfactionState,
-            "PENDING",
-            risk,
-            rec,
-            reasoning,
-            e.createdAt != null ? e.createdAt.toString() : null,
-            null
+                e.id != null ? e.id.toString() : null,
+                e.id != null ? e.id.toString() : null,
+                e.intentType,
+                e.phase,
+                e.satisfactionState,
+                reviewStatus(e),
+                risk,
+                rec,
+                reasoning,
+                e.createdAt != null ? e.createdAt.toString() : null,
+                null
         );
     }
 
-    /** Simple string extraction from JSON payload — avoids ObjectMapper dependency. */
-    private String extractFromPayload(String payload, String startToken, String endToken) {
+    private String extractJson(String payload, String startToken, String endToken) {
         if (payload == null) return null;
         int s = payload.indexOf(startToken);
         if (s < 0) return null;
@@ -173,27 +219,27 @@ public class ReviewQueueResource {
     // ── DTOs ──────────────────────────────────────────────────────────────────
 
     public record ReviewItem(
-        String id,
-        String intentId,
-        String intentType,
-        String phase,
-        String satisfactionState,
-        String reviewStatus,
-        Double riskScore,
-        String aiRecommendation,
-        String reasoning,
-        String createdAt,
-        String reviewedAt
+            String id,
+            String intentId,
+            String intentType,
+            String phase,
+            String satisfactionState,
+            String reviewStatus,
+            Double riskScore,
+            String aiRecommendation,
+            String reasoning,
+            String createdAt,
+            String reviewedAt
     ) {}
 
     public record ReviewAction(String note) {}
 
     public record ReviewResult(
-        String intentId,
-        String action,
-        String reviewedBy,
-        String note,
-        String reviewedAt,
-        String message
+            String intentId,
+            String action,
+            String reviewedBy,
+            String note,
+            String reviewedAt,
+            String message
     ) {}
 }
