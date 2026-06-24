@@ -16,22 +16,11 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import java.time.Instant;
 import java.util.*;
 
-/**
- * Human Review Queue.
- *
- * Shows ALL intents that have "requireHumanReview":true in their payload.
- * - Non-terminal intents → PENDING (awaiting review)
- * - Terminal intents     → APPROVED or REJECTED (already reviewed)
- *
- * Approve → satisfactionState=SATISFIED
- * Reject  → satisfactionState=VIOLATED
- */
 @Path("/api/review-queue")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ReviewQueueResource {
 
-    // ── Audit action constants ────────────────────────────────────────────────
     public static final String ACTION_INTENT_APPROVED = "INTENT_APPROVED";
     public static final String ACTION_INTENT_REJECTED = "INTENT_REJECTED";
 
@@ -50,13 +39,23 @@ public class ReviewQueueResource {
         UUID tenantId = tenantId();
         Log.debugf("[ReviewQueue] list: tenant=%s", tenantId);
 
-        // Fetch recent intents — filter those with requireHumanReview flag
         return intentRepository.findPageByTenant(
                         tenantId, null, "createdAt", "desc", page, size)
-                .map(entities -> entities.stream()
-                        .filter(this::hasReviewFlag)
-                        .map(this::toReviewItem)
-                        .toList());
+                .flatMap(entities -> {
+                    List<IntentEntity> pending = entities.stream()
+                            .filter(this::hasReviewFlag)
+                            .toList();
+
+                    if (pending.isEmpty()) return Uni.createFrom().item(List.of());
+
+                    // Fetch responseText for each pending intent via reactive query
+                    List<UUID> ids = pending.stream().map(e -> e.id).toList();
+
+                    return fetchLatestResponseTexts(tenantId, ids)
+                            .map(execMap -> pending.stream()
+                                    .map(e -> toReviewItem(e, execMap.get(e.id)))
+                                    .toList());
+                });
     }
 
     // ── POST /api/review-queue/{id}/approve ──────────────────────────────────
@@ -135,17 +134,18 @@ public class ReviewQueueResource {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Returns true if intent needs human review and has NOT yet been reviewed.
-     * Excludes terminal intents (already approved or rejected).
-     */
     private boolean hasReviewFlag(IntentEntity e) {
         if (e == null || e.payload == null) return false;
-        // Must have requireHumanReview flag
-        boolean hasFlag = e.payload.contains("\"requireHumanReview\":true")
-                || e.payload.contains("\"requireHumanReview\": true");
-        if (!hasFlag) return false;
-        // Exclude already reviewed — terminal SATISFIED = approved, terminal VIOLATED = rejected
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper =
+                    new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(e.payload);
+            com.fasterxml.jackson.databind.JsonNode constraints = root.path("constraints");
+            if (constraints.isMissingNode()) return false;
+            if (!constraints.path("requireHumanReview").asBoolean(false)) return false;
+        } catch (Exception ex) {
+            return false;
+        }
         if (e.terminal && ("SATISFIED".equals(e.satisfactionState)
                 || "VIOLATED".equals(e.satisfactionState))) {
             return false;
@@ -153,7 +153,6 @@ public class ReviewQueueResource {
         return true;
     }
 
-    /** Maps reviewStatus based on satisfactionState */
     private String reviewStatus(IntentEntity e) {
         if (!e.terminal) return "PENDING";
         return switch (e.satisfactionState != null ? e.satisfactionState : "") {
@@ -163,16 +162,55 @@ public class ReviewQueueResource {
         };
     }
 
-    private ReviewItem toReviewItem(IntentEntity e) {
-        String rec       = extractJson(e.payload, "\"recommendation\":\"", "\"");
-        String reasoning = extractJson(e.payload, "\"reasoning\":\"", "\"");
+    /**
+     * Reactive query — no blocking JDBC.
+     * Fetches latest response_text per intent_id using DISTINCT ON.
+     */
+    private Uni<Map<UUID, String>> fetchLatestResponseTexts(UUID tenantId, List<UUID> intentIds) {
+        if (intentIds == null || intentIds.isEmpty())
+            return Uni.createFrom().item(Map.of());
+
+        String sql = """
+                SELECT DISTINCT ON (er.intent_id) er.intent_id, er.response_text
+                FROM execution_records er
+                WHERE er.tenant_id = :tenantId
+                  AND er.intent_id IN :intentIds
+                ORDER BY er.intent_id, er.executed_at DESC
+                """;
+
+        return io.quarkus.hibernate.reactive.panache.Panache.getSession()
+                .flatMap(session -> session
+                        .createNativeQuery(sql)
+                        .setParameter("tenantId", tenantId)
+                        .setParameter("intentIds", intentIds)
+                        .getResultList()
+                )
+                .map(rows -> {
+                    Map<UUID, String> map = new HashMap<>();
+                    for (Object row : rows) {
+                        Object[] cols = (Object[]) row;
+                        if (cols[0] != null) {
+                            map.put(UUID.fromString(cols[0].toString()),
+                                    cols[1] != null ? cols[1].toString() : null);
+                        }
+                    }
+                    return map;
+                })
+                .onFailure().recoverWithItem(ex -> {
+                    Log.warnf(ex, "[ReviewQueue] fetchLatestResponseTexts failed");
+                    return Map.of();
+                });
+    }
+
+    private ReviewItem toReviewItem(IntentEntity e, String responseText) {
+        String rec       = extractJson(responseText, "\"recommendation\":\"", "\"");
+        String reasoning = extractJson(responseText, "\"reasoning\":\"", "\"");
         Double risk      = null;
-        String riskStr   = extractJson(e.payload, "\"riskScore\":", ",");
-        if (riskStr == null) riskStr = extractJson(e.payload, "\"riskScore\":", "}");
+        String riskStr   = extractJson(responseText, "\"riskScore\":", ",");
+        if (riskStr == null) riskStr = extractJson(responseText, "\"riskScore\":", "}");
         if (riskStr != null) {
             try { risk = Double.parseDouble(riskStr.trim()); } catch (Exception ignored) {}
         }
-
         return new ReviewItem(
                 e.id != null ? e.id.toString() : null,
                 e.id != null ? e.id.toString() : null,
@@ -183,6 +221,7 @@ public class ReviewQueueResource {
                 risk,
                 rec,
                 reasoning,
+                responseText,
                 e.createdAt != null ? e.createdAt.toString() : null,
                 null
         );
@@ -228,6 +267,7 @@ public class ReviewQueueResource {
             Double riskScore,
             String aiRecommendation,
             String reasoning,
+            String responseText,
             String createdAt,
             String reviewedAt
     ) {}
