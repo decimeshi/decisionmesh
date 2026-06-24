@@ -3,6 +3,7 @@ package com.decisionmesh.persistence.entity;
 import com.decisionmesh.common.ledger.LedgerEntry;
 import com.decisionmesh.common.store.LedgerStore;
 import com.decisionmesh.governance.entity.LedgerEntryEntity;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
@@ -39,6 +40,7 @@ public class PostgresLedgerStore implements LedgerStore {
     // ── Load all entries for an intent ────────────────────────────────────────
 
     @Override
+    @WithSession
     public Uni<List<LedgerEntry>> load(UUID intentId) {
         return LedgerEntryEntity
                 .findByIntentOrdered(intentId)
@@ -51,6 +53,7 @@ public class PostgresLedgerStore implements LedgerStore {
 
     // ── Tenant-scoped load (used by ReplayResource) ───────────────────────────
 
+    @WithSession
     public Uni<List<LedgerEntry>> loadForTenant(String tenantId, UUID intentId) {
         return LedgerEntryEntity
                 .findByTenantAndIntentOrdered(tenantId, intentId)

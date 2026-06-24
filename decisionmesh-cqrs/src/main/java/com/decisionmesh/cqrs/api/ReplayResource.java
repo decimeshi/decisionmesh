@@ -18,19 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * REST endpoint for deterministic governance replay.
- *
- * GET /api/governance/replay/{intentId}
- *   → Returns the full governance ledger for an intent,
- *     reconstructed with cryptographic chain validation.
- *
- * GET /api/governance/replay/{intentId}/verify
- *   → Returns only chain validity status (lightweight check).
- *
- * Auth: JWT Bearer — tenantId resolved from TenantContext.
- * Roles: sys_admin, tenant_admin, tenant_user
- */
 @Path("/api/governance/replay")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({"sys_admin", "tenant_admin", "tenant_user"})
@@ -41,24 +28,27 @@ public class ReplayResource {
     @Inject TenantContext tenantContext;
     @Inject JsonWebToken  jwt;
 
-    // ── GET /api/governance/replay/{intentId} ─────────────────────────────────
-
     @GET
     @Path("/{intentId}")
     @WithSession
     public Uni<Response> replay(@PathParam("intentId") UUID intentId) {
         UUID tenantId = resolveTenantId();
-
         Log.debugf("[ReplayResource] Replay request: intent=%s tenant=%s", intentId, tenantId);
 
         return replayService.replayForTenant(tenantId, intentId)
                 .map(entries -> {
                     if (entries.isEmpty()) {
+                        // No ledger entries — intent may be pending human review
+                        // or governance ledger hasn't been written yet
                         return Response.ok(Map.of(
-                                "intentId",  intentId.toString(),
-                                "entries",   List.of(),
-                                "message",   "No governance ledger entries found for this intent",
-                                "chainValid", true
+                                "intentId",   intentId.toString(),
+                                "entries",    List.of(),
+                                "chainValid", true,
+                                "status",     "PENDING_REVIEW",
+                                "message",    "No governance ledger entries found. " +
+                                        "If this intent has requireHumanReview=true, " +
+                                        "it is awaiting a decision in the Review Queue. " +
+                                        "Replay will be available after the decision is made."
                         )).build();
                     }
 
@@ -71,6 +61,7 @@ public class ReplayResource {
                             "entries",     entries,
                             "totalEvents", entries.size(),
                             "chainValid",  allValid,
+                            "status",      "COMPLETE",
                             "summary", Map.of(
                                     "allowed", allowed,
                                     "denied",  denied,
@@ -87,8 +78,6 @@ public class ReplayResource {
                 });
     }
 
-    // ── GET /api/governance/replay/{intentId}/verify ──────────────────────────
-
     @GET
     @Path("/{intentId}/verify")
     @WithSession
@@ -97,12 +86,21 @@ public class ReplayResource {
 
         return replayService.replayForTenant(tenantId, intentId)
                 .map(entries -> {
+                    if (entries.isEmpty()) {
+                        return Response.ok(Map.of(
+                                "intentId",   intentId.toString(),
+                                "entryCount", 0,
+                                "chainValid", true,
+                                "status",     "PENDING_REVIEW",
+                                "message",    "No ledger entries — intent may be pending human review"
+                        )).build();
+                    }
                     boolean chainValid = entries.stream().allMatch(e -> e.chainValid);
                     return Response.ok(Map.of(
-                            "intentId",    intentId.toString(),
-                            "entryCount",  entries.size(),
-                            "chainValid",  chainValid,
-                            "status",      chainValid ? "INTACT" : "COMPROMISED"
+                            "intentId",   intentId.toString(),
+                            "entryCount", entries.size(),
+                            "chainValid", chainValid,
+                            "status",     chainValid ? "INTACT" : "COMPROMISED"
                     )).build();
                 })
                 .onFailure().recoverWithItem(ex ->
@@ -110,8 +108,6 @@ public class ReplayResource {
                                 .entity(Map.of("message", "Verification failed: " + ex.getMessage()))
                                 .build());
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private UUID resolveTenantId() {
         UUID ctxTid = tenantContext.getTenantId();
