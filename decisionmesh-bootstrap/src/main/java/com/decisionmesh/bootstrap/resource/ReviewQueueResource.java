@@ -2,6 +2,7 @@ package com.decisionmesh.bootstrap.resource;
 
 import com.decisionmesh.bootstrap.service.AuditService;
 import com.decisionmesh.contracts.security.context.TenantContext;
+import com.decisionmesh.governance.service.LedgerAppendService;
 import com.decisionmesh.persistence.entity.IntentEntity;
 import com.decisionmesh.persistence.repository.IntentRepository;
 import io.quarkus.hibernate.reactive.panache.common.WithSession;
@@ -26,7 +27,8 @@ public class ReviewQueueResource {
 
     @Inject IntentRepository intentRepository;
     @Inject AuditService     auditService;
-    @Inject TenantContext    tenantContext;
+    @Inject TenantContext        tenantContext;
+    @Inject LedgerAppendService  ledgerAppend;
     @Inject JsonWebToken     jwt;
 
     // ── GET /api/review-queue ─────────────────────────────────────────────────
@@ -79,6 +81,16 @@ public class ReviewQueueResource {
                     entity.terminal          = true;
                     return intentRepository.persist(entity);
                 })
+                .flatMap(v -> ledgerAppend.appendDecision(
+                                intentId,
+                                tenantId.toString(),
+                                "INTENT_SATISFIED",
+                                null, null, null)
+                        .onFailure().invoke(ex ->
+                                Log.warnf("[ReviewQueue] Ledger append failed for approve intent=%s — non-fatal: %s",
+                                        intentId, ex.getMessage()))
+                        .onFailure().recoverWithNull()
+                        .replaceWithVoid())
                 .flatMap(v -> auditService.log(
                         tenantId, reviewer,
                         ACTION_INTENT_APPROVED,
@@ -119,6 +131,16 @@ public class ReviewQueueResource {
                     entity.terminal          = true;
                     return intentRepository.persist(entity);
                 })
+                .flatMap(v -> ledgerAppend.appendDecision(
+                                intentId,
+                                tenantId.toString(),
+                                "INTENT_VIOLATED",
+                                null, null, null)
+                        .onFailure().invoke(ex ->
+                                Log.warnf("[ReviewQueue] Ledger append failed for reject intent=%s — non-fatal: %s",
+                                        intentId, ex.getMessage()))
+                        .onFailure().recoverWithNull()
+                        .replaceWithVoid())
                 .flatMap(v -> auditService.log(
                         tenantId, reviewer,
                         ACTION_INTENT_REJECTED,

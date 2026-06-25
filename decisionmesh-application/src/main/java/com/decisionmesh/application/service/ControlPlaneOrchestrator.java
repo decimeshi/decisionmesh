@@ -17,6 +17,7 @@ import com.decisionmesh.contracts.security.guard.PromptInjectionGuardService;
 import com.decisionmesh.domain.event.DomainEvent;
 import com.decisionmesh.domain.execution.ExecutionRecord;
 import com.decisionmesh.domain.intent.Intent;
+import com.decisionmesh.domain.intent.SatisfactionState;
 import com.decisionmesh.billing.service.CreditLedgerService;
 import com.decisionmesh.application.port.OutboxPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -639,6 +640,27 @@ public class ControlPlaneOrchestrator {
                     Log.debugf("[Quality] No quality score to update for intent=%s (record=%s)",
                             intent.getId(), executionRecord != null ? "present but unscored" : "null");
                     return Uni.createFrom().voidItem();
+                })
+                // ── APPEND TERMINAL LEDGER ENTRY ──────────────────────────────
+                // Records the final SATISFIED or VIOLATED decision in the governance
+                // ledger so Replay shows the terminal outcome alongside the policy
+                // evaluations. Non-fatal — a failure here must not roll back the
+                // already-persisted intent state.
+                .flatMap(v -> {
+                    String eventType = intent.getSatisfactionState() == SatisfactionState.VIOLATED
+                            ? "INTENT_VIOLATED" : "INTENT_SATISFIED";
+                    Log.debugf("[Ledger] Appending terminal entry: intent=%s event=%s",
+                            intent.getId(), eventType);
+                    return ledgerAppend.appendDecision(
+                                    intent.getId(),
+                                    intent.getTenantId().toString(),
+                                    eventType,
+                                    null, null, null)
+                            .onFailure().invoke(ex ->
+                                    Log.warnf("[Ledger] Terminal append failed for intent=%s — non-fatal: %s",
+                                            intent.getId(), ex.getMessage()))
+                            .onFailure().recoverWithNull()
+                            .replaceWithVoid();
                 });
     }
 
@@ -718,6 +740,4 @@ public class ControlPlaneOrchestrator {
         return intent.getConstraints() != null
                 && intent.getConstraints().requireHumanReview();
     }
-
-
 }

@@ -1,7 +1,7 @@
 package com.decisionmesh.common.ledger;
 
-
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 public class LedgerEntry {
@@ -46,9 +46,25 @@ public class LedgerEntry {
     }
 
     public String computeDeterministicPayload() {
-        return intentId + tenantId + aggregateVersion + eventId + eventType +
-                policySnapshotJson + budgetSnapshotJson + slaSnapshotJson +
-                previousHash + timestamp.toString();
+        // Truncate timestamp to MICROSECONDS before hashing.
+        // PostgreSQL stores timestamps at microsecond precision — Java Instant
+        // has nanosecond precision. Without truncation, Instant.now() produces
+        // "...842983000Z" at write time but PostgreSQL returns "...842983Z" at
+        // read time, causing a hash mismatch even though the value is the same.
+        String ts = timestamp != null
+                ? timestamp.truncatedTo(ChronoUnit.MICROS).toString()
+                : "";
+
+        return (intentId  != null ? intentId.toString()  : "")
+                + (tenantId           != null ? tenantId           : "")
+                + aggregateVersion
+                + (eventId   != null ? eventId.toString()   : "")
+                + (eventType          != null ? eventType          : "")
+                + (policySnapshotJson != null ? policySnapshotJson : "")
+                + (budgetSnapshotJson != null ? budgetSnapshotJson : "")
+                + (slaSnapshotJson    != null ? slaSnapshotJson    : "")
+                + (previousHash       != null ? previousHash       : "")
+                + ts;
     }
 
     public UUID getLedgerId()             { return ledgerId; }

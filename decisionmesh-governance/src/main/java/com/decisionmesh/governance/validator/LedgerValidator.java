@@ -79,6 +79,8 @@ public class LedgerValidator {
     public String computeHash(LedgerEntry entry) {
         try {
             String payload = entry.computeDeterministicPayload();
+            Log.debugf("[LedgerValidator] Payload for v%d: %s",
+                    entry.getAggregateVersion(), payload);  // ← add this
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] bytes = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(bytes);
