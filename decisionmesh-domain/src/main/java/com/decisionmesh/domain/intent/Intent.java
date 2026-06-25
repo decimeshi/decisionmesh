@@ -318,7 +318,12 @@ public final class Intent {
         // is not a standard transition but a governance interception.
         this.phase             = IntentPhase.COMPLETED;  // visually complete
         this.satisfactionState = SatisfactionState.UNKNOWN; // awaiting human decision
-        this.terminal          = false;  // NOT terminal — stays in review queue
+        this.terminal          = true;   // FIX: terminal=true so UI polling stops immediately.
+        // The intent stays in the review queue because
+        // ReviewQueueResource.hasReviewFlag() filters on
+        // satisfactionState=UNKNOWN, not on terminal=false.
+        // Without this, Playground/IntentDetails/Replay all
+        // poll indefinitely waiting for terminal=true.
         this.version++;
         touch();
         // Emit SATISFIED event for now — will update to PENDING_REVIEW when enum is extended
@@ -433,9 +438,15 @@ public final class Intent {
     }
 
     private void enforceInvariant() {
-        if (phase == IntentPhase.COMPLETED && satisfactionState == SatisfactionState.UNKNOWN)
+        // UNKNOWN is valid for COMPLETED intents parked in the review queue.
+        // Only throw if UNKNOWN has no explanation (i.e. not a review queue intent).
+        // Review queue intents: phase=COMPLETED, satisfactionState=UNKNOWN, terminal=true.
+        if (phase == IntentPhase.COMPLETED
+                && satisfactionState == SatisfactionState.UNKNOWN
+                && !terminal) {
             throw new IllegalStateException(
-                    "Completed intent must have satisfaction state set: id=" + id);
+                    "Completed non-terminal intent must have satisfaction state set: id=" + id);
+        }
     }
     public String getViolationReason() { return violationReason; }
     public void setViolationReason(String reason) {
