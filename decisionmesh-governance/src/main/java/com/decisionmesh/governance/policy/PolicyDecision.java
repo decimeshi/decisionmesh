@@ -1,14 +1,19 @@
 package com.decisionmesh.governance.policy;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PolicyDecision {
 
     private final boolean allowed;
     private final String reason;
 
-    private PolicyDecision(boolean allowed, String reason) {
+    @JsonCreator
+    private PolicyDecision(
+            @JsonProperty("allowed") boolean allowed,
+            @JsonProperty("reason")  String  reason) {
         this.allowed = allowed;
-        this.reason = reason;
+        this.reason  = reason;
     }
 
     public static PolicyDecision allow() {
@@ -19,11 +24,9 @@ public class PolicyDecision {
         return new PolicyDecision(false, reason);
     }
 
-    public boolean isAllowed() {
-        return allowed;
-    }
+    @JsonProperty("allowed")
+    public boolean isAllowed() { return allowed; }
 
-    public String getReason() {
-        return reason;
-    }
+    @JsonProperty("reason")
+    public String getReason()  { return reason; }
 }

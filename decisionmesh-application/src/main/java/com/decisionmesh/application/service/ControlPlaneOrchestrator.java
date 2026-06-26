@@ -23,6 +23,8 @@ import com.decisionmesh.application.port.OutboxPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.decisionmesh.domain.plan.Plan;
 import com.decisionmesh.governance.service.LedgerAppendService;
+import com.decisionmesh.governance.snapshot.PolicySnapshot;
+import com.decisionmesh.governance.policy.PolicyDecision;
 import io.quarkus.logging.Log;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -199,7 +201,7 @@ public class ControlPlaneOrchestrator {
                         intent.getId(),
                         intent.getTenantId().toString(),
                         "PRE_SUBMISSION_POLICY",
-                        null, null, null).replaceWith(decision))
+                        toSnapshot(decision), null, null).replaceWith(decision))
 
                 // Budget validation
                 .flatMap(v -> budgetGuard.validateBudget(intent))
@@ -272,7 +274,7 @@ public class ControlPlaneOrchestrator {
                                         intent.getId(),
                                         intent.getTenantId().toString(),
                                         "POST_EXECUTION_POLICY",
-                                        null, null, null).replaceWith(decision))
+                                        toSnapshot(decision), null, null).replaceWith(decision))
                                 .replaceWith(record))
 
                 // ── SATISFIED | VIOLATED (with async drift) ───────────────────
@@ -662,6 +664,25 @@ public class ControlPlaneOrchestrator {
                             .onFailure().recoverWithNull()
                             .replaceWithVoid();
                 });
+    }
+
+    /**
+     * Converts a PolicyEvaluationResult to a PolicySnapshot for ledger storage.
+     * Maps PolicyEvaluation.Decision → PolicyDecision (allowed/denied + reason)
+     * so Replay can show which policy ran and what decision was made.
+     */
+    private PolicySnapshot toSnapshot(PolicyEvaluationResult result) {
+        if (result == null) return null;
+        PolicyDecision decision = result.isBlocking()
+                ? PolicyDecision.deny(result.getBlockReason())
+                : PolicyDecision.allow();
+        return new PolicySnapshot(
+                decision,
+                result.getPolicyId(),   // policyVersion
+                "ENFORCE",              // enforcementMode
+                null,                   // evaluatedContextJson
+                null                    // plan — not available at orchestrator level
+        );
     }
 
     /**
