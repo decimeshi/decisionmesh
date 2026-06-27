@@ -22,8 +22,6 @@ public class IntentLibraryResource {
     @Inject
     IntentLibraryService service;
 
-    // GET /api/intent-library/fintech
-    // → FintechIntents.jsx: request(keycloak, `/intent-library/${vertical.toLowerCase()}`)
     @GET
     @Path("/{vertical}")
     @WithSession
@@ -32,8 +30,6 @@ public class IntentLibraryResource {
         return service.getByVertical(vertical.toUpperCase());
     }
 
-    // GET /api/intent-library/fintech/meta/categories
-    // → FintechIntents.jsx: request(keycloak, `/intent-library/${vertical.toLowerCase()}/meta/categories`)
     @GET
     @Path("/{vertical}/meta/categories")
     @WithSession
@@ -42,8 +38,6 @@ public class IntentLibraryResource {
         return service.getCategorySummaries(vertical.toUpperCase());
     }
 
-    // GET /api/intent-library/fintech/by-category/PAYMENTS
-    // → FintechIntents.jsx: request(keycloak, `/intent-library/${vertical.toLowerCase()}/by-category/${selected}`)
     @GET
     @Path("/{vertical}/by-category/{category}")
     @WithSession
@@ -54,8 +48,6 @@ public class IntentLibraryResource {
                 vertical.toUpperCase(), category.toUpperCase());
     }
 
-    // GET /api/intent-library/fintech/search?q=fraud&tag=rbi&risk=HIGH
-    // → FintechIntents.jsx: request(keycloak, `/intent-library/${vertical.toLowerCase()}/search?${qs}`)
     @GET
     @Path("/{vertical}/search")
     @WithSession
@@ -67,8 +59,6 @@ public class IntentLibraryResource {
         return service.search(vertical.toUpperCase(), query, tag, risk);
     }
 
-    // GET /api/intent-library/intent/{id}
-    // → FintechIntents.jsx: request(keycloak, `/intent-library/intent/${id}`)
     @GET
     @Path("/intent/{id}")
     @WithSession
@@ -76,5 +66,17 @@ public class IntentLibraryResource {
         return service.getById(id)
                 .onItem().ifNull()
                 .failWith(new NotFoundException("Intent not found: " + id));
+    }
+
+    // GET /api/intent-library/by-name/{name}
+    // Used by Playground.jsx setIntentType() to load full examplePayload
+    // when user selects an intent type from the chip browser.
+    @GET
+    @Path("/by-name/{name}")
+    @WithSession
+    public Uni<IntentLibraryEntity> byName(@PathParam("name") String name) {
+        return service.getByName(name)
+                .onItem().ifNull()
+                .failWith(new NotFoundException("Intent not found: " + name));
     }
 }

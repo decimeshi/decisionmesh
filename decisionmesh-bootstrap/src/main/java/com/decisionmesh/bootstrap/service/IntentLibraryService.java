@@ -41,25 +41,23 @@ public class IntentLibraryService {
                         .getResultList()
         ).map(rows -> rows.stream().map(row -> {
             Object[] r = (Object[]) row;
-            // COUNT(*) may return BigInteger, Long, or Integer depending on driver
             int count = 0;
             if (r[2] != null) {
                 try { count = ((Number) r[2]).intValue(); }
                 catch (Exception e) { count = Integer.parseInt(r[2].toString()); }
             }
             return new CategoryResponse(
-                    (String) r[0],   // category
-                    (String) r[1],   // categoryLabel
-                    count,           // count — safely cast
-                    (String) r[3],   // maxRiskLevel
-                    (String) r[4]    // regulatoryRef
+                    (String) r[0],
+                    (String) r[1],
+                    count,
+                    (String) r[3],
+                    (String) r[4]
             );
         }).toList());
     }
 
     public Uni<List<IntentLibraryEntity>> search(
             String vertical, String query, String tag, String risk) {
-        // Use Panache query builder
         StringBuilder q = new StringBuilder(
                 "vertical = ?1 and isActive = true");
         List<Object> params = new ArrayList<>();
@@ -85,5 +83,10 @@ public class IntentLibraryService {
 
     public Uni<IntentLibraryEntity> getById(UUID id) {
         return repo.findById(id);
+    }
+
+    public Uni<IntentLibraryEntity> getByName(String name) {
+        return repo.find("name = ?1 and isActive = true", name)
+                .firstResult();
     }
 }
