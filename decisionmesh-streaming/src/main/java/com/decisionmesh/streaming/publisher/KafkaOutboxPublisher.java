@@ -10,6 +10,7 @@ import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import io.smallrye.common.annotation.Blocking;
 
 import java.util.List;
 
@@ -43,6 +44,7 @@ public class KafkaOutboxPublisher {
      * Non-fatal: any failure is logged and retried on next cycle.
      */
     @Scheduled(every = "5s", delayed = "15s")
+    @Blocking
     void relayPendingEvents() {
         publishPending()
                 .subscribe().with(
