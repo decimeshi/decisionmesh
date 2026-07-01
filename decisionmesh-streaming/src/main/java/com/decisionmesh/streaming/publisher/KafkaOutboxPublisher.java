@@ -7,6 +7,7 @@ import com.decisionmesh.streaming.projection.IntentProjectionWorker;
 import io.quarkus.logging.Log;
 import io.quarkus.scheduler.Scheduled;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -73,18 +74,20 @@ public class KafkaOutboxPublisher {
                         event.getAggregateId(),
                         event.getEventType(),
                         event.getPayloadJson())
-                // Drive projection workers synchronously during relay.
-                // These update read models (intents table phase, drift_tracking,
-                // spend_records) so the UI reflects the latest state.
-                .invoke(() -> {
+                // Run projection workers on a worker thread — NOT the event loop.
+                // .invoke() runs on the event loop which cannot be blocked.
+                // .call() with executeBlocking() offloads to a worker thread safely.
+                .call(v -> Uni.createFrom().<Void>emitter(em -> {
                     try {
                         intentProjection.handle(event.getEventType(), event.getPayloadJson());
                         analyticsProjection.handle(event.getEventType(), event.getPayloadJson());
+                        em.complete(null);
                     } catch (Exception ex) {
                         Log.warnf("[Outbox] Projection failed for event=%s (non-fatal): %s",
                                 event.getId(), ex.getMessage());
+                        em.complete(null); // non-fatal — always complete
                     }
-                })
+                }).runSubscriptionOn(Infrastructure.getDefaultWorkerPool()))
                 .flatMap(v -> outboxRepository.markPublished(event))
                 .onFailure().invoke(ex ->
                         Log.errorf("[Outbox] Failed to relay event=%s type=%s: %s",
