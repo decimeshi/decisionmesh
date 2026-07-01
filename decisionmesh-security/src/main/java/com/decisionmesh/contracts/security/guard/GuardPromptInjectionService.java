@@ -23,9 +23,9 @@ import java.util.regex.Pattern;
  *   intent.getObjective()  — Object (serialised to JSON for scanning)
  */
 @ApplicationScoped
-public class PromptInjectionGuardService {
+public class GuardPromptInjectionService {
 
-    private static final Logger LOG = Logger.getLogger(PromptInjectionGuardService.class);
+    private static final Logger LOG = Logger.getLogger(GuardPromptInjectionService.class);
 
     @Inject
     ObjectMapper mapper;

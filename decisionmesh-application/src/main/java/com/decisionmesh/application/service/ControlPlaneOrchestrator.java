@@ -13,7 +13,8 @@ import com.decisionmesh.application.port.ExecutionRecordQueryPort;
 import com.decisionmesh.application.ratelimit.RateLimiter;
 import com.decisionmesh.application.reconciliation.ReconciliationService;
 import com.decisionmesh.application.telemetry.TelemetryPublisher;
-import com.decisionmesh.contracts.security.guard.PromptInjectionGuardService;
+import com.decisionmesh.contracts.security.guard.GuardPromptInjectionService;
+import com.decisionmesh.contracts.security.service.PiiMaskingGuardService;
 import com.decisionmesh.domain.event.DomainEvent;
 import com.decisionmesh.domain.execution.ExecutionRecord;
 import com.decisionmesh.domain.intent.Intent;
@@ -82,7 +83,10 @@ public class ControlPlaneOrchestrator {
     @Inject ViolationHandler violationHandler;
 
     // ── New services ──────────────────────────────────────────────────────────
-    @Inject PromptInjectionGuardService injectionGuard;   // decisionmesh-security
+    @Inject
+    GuardPromptInjectionService injectionGuard;   // decisionmesh-security
+    @Inject
+    PiiMaskingGuardService piiGuard;
     @Inject OutputQualityScorerService  qualityScorer;    // decisionmesh-intelligence
     @Inject CreditLedgerService         creditLedger;     // decisionmesh-billing
     @Inject LedgerAppendService         ledgerAppend;     // decisionmesh-governance
@@ -297,7 +301,7 @@ public class ControlPlaneOrchestrator {
      * marks the intent VIOLATED via the existing failure handler.
      */
     private Uni<Void> runInjectionGuard(Intent intent) {
-        PromptInjectionGuardService.ScanResult scan = injectionGuard.scan(intent);
+        GuardPromptInjectionService.ScanResult scan = injectionGuard.scan(intent);
 
         if (scan.isCritical()) {
             Log.warnf("[InjectionGuard] CRITICAL injection blocked: intent=%s risk=%.2f matches=%d",
@@ -308,6 +312,28 @@ public class ControlPlaneOrchestrator {
                     "INJECTION_GUARD",
                     String.format("Prompt injection blocked (risk=%.2f, severity=%s)",
                             scan.injectionRisk(), scan.severity()));
+        }
+
+        // ── PII MASKING ──────────────────────────────────────────────────────────
+// Runs after injection guard, before planning.
+// If PII is detected, the masked payload is stored on the intent via
+// flagPiiDetected(). The planner and execution engine must call
+// intent.getMaskedObjective() instead of intent.getObjective() when
+// building the LLM prompt — see Change 4 below.
+        PiiMaskingGuardService.MaskingResult pii = piiGuard.scanAndMask(intent);
+        if (pii.piiDetected()) {
+            intent.flagPiiDetected(pii.maskedPayload());
+            Log.infof("[PiiGuard] %d PII match(es) masked in intent %s before planning",
+                    pii.matches().size(), intent.getId());
+            if (pii.hasHighRisk()) {
+                // HIGH severity: Aadhaar / PAN / card number detected.
+                // Log at WARN — the policy engine's requireHumanReview constraint
+                // on the intent already handles routing to review queue if configured.
+                // No separate action needed here unless you want to force
+                // human review regardless of the intent's own constraints.
+                Log.warnf("[PiiGuard] HIGH severity PII in intent %s — Aadhaar/PAN/card detected",
+                        intent.getId());
+            }
         }
 
         if (scan.isHighRisk()) {

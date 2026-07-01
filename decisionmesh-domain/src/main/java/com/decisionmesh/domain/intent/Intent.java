@@ -477,7 +477,13 @@ public final class Intent {
         boolean firstTime = this.tenantId == null;
         this.tenantId = tenantId;
         if (firstTime && !rehydrated) {
-            emit(IntentEventType.CREATED);
+            // Only emit CREATED if it hasn't been emitted already
+            boolean alreadyEmittedCreated = events.stream()
+                    .anyMatch(e -> e instanceof IntentStateChangedEvent isce
+                            && isce.eventType() == IntentEventType.CREATED);
+            if (!alreadyEmittedCreated) {
+                emit(IntentEventType.CREATED);
+            }
         }
     }
 
@@ -515,6 +521,9 @@ public final class Intent {
     @JsonProperty("modelTier")
     public String             getModelTier()         { return modelTier; }
 
+    @JsonIgnore
+    private JsonNode maskedObjective;
+
     public Double getCeilingUsd() {
         return budget != null ? budget.getCeilingUsd() : null;
     }
@@ -530,4 +539,18 @@ public final class Intent {
         events.clear();
         return copy;
     }
+    /**
+     * Store the PII-masked version of the objective detected during PLANNING.
+     * Named flagPiiDetected() to match the domain verb pattern.
+     * Does not emit a domain event — security annotation, not a lifecycle transition.
+     */
+    public void flagPiiDetected(JsonNode maskedObjective) {
+        if (maskedObjective == null) return;
+        this.maskedObjective = maskedObjective;
+        // No version bump or event — same pattern as flagInjectionRisk()
+    }
+    @JsonIgnore
+    public JsonNode getMaskedObjective() { return maskedObjective; }
+
+    public boolean hasMaskedObjective() { return maskedObjective != null; }
 }
